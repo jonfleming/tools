@@ -1,10 +1,10 @@
 import { ArrowUp, ArrowDown } from "react-feather";
 import { useState } from "react";
 
-function Event({ event, timestamp }) {
+function Message({ message }) {
   const [isExpanded, setIsExpanded] = useState(false);
 
-  const isClient = event.event_id && !event.event_id.startsWith("event_");
+  const isUser = message.role == 'user'
 
   return (
     <div className="flex flex-col gap-2 p-2 rounded-md bg-gray-50">
@@ -12,14 +12,13 @@ function Event({ event, timestamp }) {
         className="flex items-center gap-2 cursor-pointer"
         onClick={() => setIsExpanded(!isExpanded)}
       >
-        {isClient ? (
+        {isUser ? (
           <ArrowDown className="text-blue-400" />
         ) : (
           <ArrowUp className="text-green-400" />
         )}
         <div className="text-sm text-gray-500">
-          {isClient ? "client:" : "server:"}
-          &nbsp;{event.type} | {timestamp}
+          {message.role}
         </div>
       </div>
       <div
@@ -27,16 +26,15 @@ function Event({ event, timestamp }) {
           isExpanded ? "block" : "hidden"
         }`}
       >
-        <pre className="text-xs">{JSON.stringify(event, null, 2)}</pre>
+        <pre className="text-xs">{ message.content }</pre>
       </div>
     </div>
   );
 }
 
-export default function EventLog({ events }) {
+export default function Conversation({ messages }) {
   const [isVisible, setIsVisible] = useState(true);
-  const eventsToDisplay = [];
-  let deltaEvents = {};
+  const messagesToDisplay = [];
 
   events.forEach((event) => {
     if (event.type.endsWith("delta")) {
@@ -48,7 +46,7 @@ export default function EventLog({ events }) {
       }
     }
 
-    eventsToDisplay.push(
+    messagesToDisplay.push(
       <Event
         key={event.event_id}
         event={event}
@@ -67,10 +65,10 @@ export default function EventLog({ events }) {
       </button>
       {isVisible && (
     <div className="flex flex-col gap-2 overflow-x-auto">
-      {events.length === 0 ? (
-        <div className="text-gray-500">Awaiting events...</div>
+      {messages.length === 0 ? (
+        <div className="text-gray-500">Waiting for conversation to start...</div>
       ) : (
-        eventsToDisplay
+        messagesToDisplay
       )}
     </div>
       )}
