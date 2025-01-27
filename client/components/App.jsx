@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import logo from "/assets/openai-logomark.svg";
 import EventLog from "./EventLog";
+import Conversation from "./Conversation";
 import SessionControls from "./SessionControls";
 import ToolPanel from "./ToolPanel";
 
@@ -136,7 +137,9 @@ export default function App() {
           <section className="absolute top-0 left-0 right-0 bottom-32 px-4 overflow-y-auto">
             <EventLog events={events} />
           </section>
-          <section className="absolute h-32 left-0 right-0 bottom-0 p-4">
+          <section className="absolute top-0 left-0 right-0 bottom-32 px-4 overflow-y-auto">
+            <EventLog events={events} />
+          </section>          <section className="absolute h-32 left-0 right-0 bottom-0 p-4">
             <SessionControls
               startSession={startSession}
               stopSession={stopSession}
