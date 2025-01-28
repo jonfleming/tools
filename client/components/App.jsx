@@ -81,7 +81,7 @@ export default function App() {
   function sendClientEvent(message) {
     if (dataChannel) {
       message.event_id = message.event_id || crypto.randomUUID();
-      dataChannel.send(JSON.stringify());
+      dataChannel.send(JSON.stringify(message));
       setEvents((prev) => [message, ...prev]);
     } else {
       console.error(
