@@ -23,9 +23,8 @@ function Event({ event, timestamp }) {
         </div>
       </div>
       <div
-        className={`text-gray-500 bg-gray-200 p-2 rounded-md overflow-x-auto ${
-          isExpanded ? "block" : "hidden"
-        }`}
+        className={`text-gray-500 bg-gray-200 p-2 rounded-md overflow-x-auto ${isExpanded ? "block" : "hidden"
+          }`}
       >
         <pre className="text-xs">{JSON.stringify(event, null, 2)}</pre>
       </div>
@@ -59,21 +58,15 @@ export default function EventLog({ events }) {
 
   return (
     <div className="flex flex-col gap-2 overflow-x-auto">
-      <button
-        className="mb-2 p-2 bg-blue-500 text-white rounded-md"
-        onClick={() => setIsVisible(!isVisible)}
-      >
-        {isVisible ? "Hide Event Log" : "Show Event Log"}
-      </button>
-      {isVisible && (
-    <div className="flex flex-col gap-2 overflow-x-auto">
-      {events.length === 0 ? (
-        <div className="text-gray-500">Awaiting events...</div>
-      ) : (
-        eventsToDisplay
-      )}
-    </div>
-      )}
+      {
+        <div className="flex flex-col gap-2 overflow-x-auto">
+          {events.length === 0 ? (
+            <div className="text-gray-500">Awaiting events...</div>
+          ) : (
+            eventsToDisplay
+          )}
+        </div>
+      }
     </div>
   );
 }

@@ -6,11 +6,14 @@ import SessionControls from "./SessionControls";
 import ToolPanel from "./ToolPanel";
 
 export default function App() {
+  const [showConversation, setShowConversation] = useState(true);
+  const [showEventLog, setShowEventLog] = useState(true);
   const [isSessionActive, setIsSessionActive] = useState(false);
   const [events, setEvents] = useState([]);
   const [dataChannel, setDataChannel] = useState(null);
   const peerConnection = useRef(null);
   const audioElement = useRef(null);
+  const [messages, setMessages] = useState([]);
 
   async function startSession() {
     // Get an ephemeral key from the Fastify server
@@ -78,7 +81,7 @@ export default function App() {
   function sendClientEvent(message) {
     if (dataChannel) {
       message.event_id = message.event_id || crypto.randomUUID();
-      dataChannel.send(JSON.stringify(message));
+      dataChannel.send(JSON.stringify());
       setEvents((prev) => [message, ...prev]);
     } else {
       console.error(
@@ -113,6 +116,7 @@ export default function App() {
     if (dataChannel) {
       // Append new server events to the list
       dataChannel.addEventListener("message", (e) => {
+        console.log("message", e);
         setEvents((prev) => [JSON.parse(e.data), ...prev]);
       });
 
@@ -124,6 +128,10 @@ export default function App() {
     }
   }, [dataChannel]);
 
+  useEffect(() => {
+    console.log("messages", messages);
+  }, [messages]);  
+
   return (
     <>
       <nav className="absolute top-0 left-0 right-0 h-16 flex items-center">
@@ -132,24 +140,35 @@ export default function App() {
           <h1>realtime console</h1>
         </div>
       </nav>
-      <main className="absolute top-16 left-0 right-0 bottom-0">
-        <section className="absolute top-0 left-0 right-[380px] bottom-0 flex">
-          <section className="absolute top-0 left-0 right-0 bottom-32 px-4 overflow-y-auto">
-            <EventLog events={events} />
-          </section>
-          <section className="absolute top-0 left-0 right-0 bottom-32 px-4 overflow-y-auto">
-            <EventLog events={events} />
-          </section>          <section className="absolute h-32 left-0 right-0 bottom-0 p-4">
-            <SessionControls
-              startSession={startSession}
-              stopSession={stopSession}
-              sendClientEvent={sendClientEvent}
-              sendTextMessage={sendTextMessage}
-              events={events}
-              isSessionActive={isSessionActive}
-            />
-          </section>
+<main className="absolute top-16 left-0 right-0 bottom-0 flex flex-col justify-between" style={{ paddingRight: "380px" }}>
+<section
+  className={`flex-1 px-4 overflow-y-auto ${showConversation ? "flex" : "hidden"}`}
+  style={{ flexBasis: showEventLog ? "50%" : "100%" }}
+>
+          <Conversation messages={messages} />
         </section>
+<section
+  className={`flex-1 px-4 overflow-y-auto ${showEventLog ? "flex" : "hidden"}`}
+  style={{ flexBasis: showConversation ? "50%" : "100%" }}
+>
+          <EventLog events={events} />
+        </section>
+<div className="px-4 flex justify-between">
+  <button className="mb-2 p-2 bg-blue-500 text-white rounded-md" onClick={() => setShowConversation(!showConversation)}>
+    {showConversation ? "Hide" : "Show"} Conversation
+  </button>
+  <button className="mb-2 p-2 bg-blue-500 text-white rounded-md" onClick={() => setShowEventLog(!showEventLog)}>
+    {showEventLog ? "Hide" : "Show"} Event Log
+  </button>
+  <SessionControls
+    startSession={startSession}
+    stopSession={stopSession}
+    sendClientEvent={sendClientEvent}
+    sendTextMessage={sendTextMessage}
+    events={events}
+    isSessionActive={isSessionActive}
+  />
+</div>
         <section className="absolute top-0 w-[380px] right-0 bottom-0 p-4 pt-0 overflow-y-auto">
           <ToolPanel
             sendClientEvent={sendClientEvent}

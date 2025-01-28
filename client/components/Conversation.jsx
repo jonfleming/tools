@@ -36,42 +36,26 @@ export default function Conversation({ messages }) {
   const [isVisible, setIsVisible] = useState(true);
   const messagesToDisplay = [];
 
-  events.forEach((event) => {
-    if (event.type.endsWith("delta")) {
-      if (deltaEvents[event.type]) {
-        // for now just log a single event per render pass
-        return;
-      } else {
-        deltaEvents[event.type] = event;
-      }
-    }
-
+  messages.forEach((event) => {
     messagesToDisplay.push(
-      <Event
-        key={event.event_id}
-        event={event}
-        timestamp={new Date().toLocaleTimeString()}
+      <Message
+        key={message.id}
+        message={message}
       />,
     );
   });
 
   return (
     <div className="flex flex-col gap-2 overflow-x-auto">
-      <button
-        className="mb-2 p-2 bg-blue-500 text-white rounded-md"
-        onClick={() => setIsVisible(!isVisible)}
-      >
-        {isVisible ? "Hide Event Log" : "Show Event Log"}
-      </button>
-      {isVisible && (
-    <div className="flex flex-col gap-2 overflow-x-auto">
-      {messages.length === 0 ? (
-        <div className="text-gray-500">Waiting for conversation to start...</div>
-      ) : (
-        messagesToDisplay
-      )}
-    </div>
-      )}
+      {
+        <div className="flex flex-col gap-2 overflow-x-auto">
+          {messages.length === 0 ? (
+            <div className="text-gray-500">Waiting for the conversation to start... </div>
+          ) : (
+            messagesToDisplay
+          )}
+        </div>
+      }
     </div>
   );
 }
