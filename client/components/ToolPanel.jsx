@@ -1,17 +1,16 @@
 import { useEffect, useState } from "react";
 
-const functionDescription = `
-Call this function when a user asks for a color palette.
-`;
-
 const sessionUpdate = {
   type: "session.update",
   session: {
+    "input_audio_transcription": {
+      "model": "whisper-1"
+    },
     tools: [
       {
         type: "function",
         name: "display_color_palette",
-        description: functionDescription,
+        description: "Call this function when a user asks for a color palette.",
         parameters: {
           type: "object",
           strict: true,
@@ -30,6 +29,22 @@ const sessionUpdate = {
             },
           },
           required: ["theme", "colors"],
+        },
+      },
+      {
+        type: "function",
+        name: "save_transcript",
+        description: "Call this function when to retrieve relevant context for the query.",
+        parameters: {
+          type: "object",
+          strict: true,
+          properties: {
+            query: {
+              type: "string",
+              description: "The speech-to-text transcript to be saved.",
+            },
+          },
+          required: ["query"],
         },
       },
     ],
@@ -66,6 +81,7 @@ function FunctionCallOutput({ functionCallOutput }) {
 export default function ToolPanel({
   isSessionActive,
   sendClientEvent,
+  addToConversation,
   events,
 }) {
   const [functionAdded, setFunctionAdded] = useState(false);
@@ -80,6 +96,7 @@ export default function ToolPanel({
       setFunctionAdded(true);
     }
 
+    // Handle function call output
     const mostRecentEvent = events[0];
     if (
       mostRecentEvent.type === "response.done" &&
@@ -90,6 +107,7 @@ export default function ToolPanel({
           output.type === "function_call" &&
           output.name === "display_color_palette"
         ) {
+          console.log("function call output", output);
           setFunctionCallOutput(output);
           setTimeout(() => {
             sendClientEvent({

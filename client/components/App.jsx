@@ -13,7 +13,7 @@ export default function App() {
   const [dataChannel, setDataChannel] = useState(null);
   const peerConnection = useRef(null);
   const audioElement = useRef(null);
-  const [messages, setMessages] = useState([]);
+  const [conversationItems, setConversationItems] = useState([]);
 
   async function startSession() {
     // Get an ephemeral key from the Fastify server
@@ -111,13 +111,43 @@ export default function App() {
     sendClientEvent({ type: "response.create" });
   }
 
+  function addToConversation(item) {
+    setConversationItems((prev) => [item, ...prev]);
+  }
+
   // Attach event listeners to the data channel when a new one is created
   useEffect(() => {
     if (dataChannel) {
       // Append new server events to the list
       dataChannel.addEventListener("message", (e) => {
-        console.log("message", e);
-        setEvents((prev) => [JSON.parse(e.data), ...prev]);
+        const data = JSON.parse(e.data);
+        setEvents((prev) => [data, ...prev]);
+
+        switch (data.type) {
+          case "response.audio_transcript.done":
+            // compute embbedding and add a conversation item - sendClientEvent(conversation.item.create)
+            console.log("transcript: ", data.transcript)
+            addToConversation({
+              item_id: crypto.randomUUID(),
+              type: "input_text",
+              role: "assistant",
+              timestamp: new Date().toLocaleTimeString(),
+              content: data.transcript,
+            });
+            break;
+          case "conversation.item.input_audio_transcription.completed":
+            console.log("transcript: ",data.transcript)
+            addToConversation({
+              item_id: crypto.randomUUID(),
+              type: "input_text",
+              role: "user",
+              timestamp: new Date().toLocaleTimeString(),
+              content: data.transcript,
+            });
+            break;
+          default:
+            break;
+        };
       });
 
       // Set session active when the data channel is opened
@@ -129,8 +159,8 @@ export default function App() {
   }, [dataChannel]);
 
   useEffect(() => {
-    console.log("messages", messages);
-  }, [messages]);  
+    // console.log("messages", messages);
+  }, [conversationItems]);  
 
   return (
     <>
@@ -145,7 +175,7 @@ export default function App() {
   className={`flex-1 px-4 overflow-y-auto ${showConversation ? "flex" : "hidden"}`}
   style={{ flexBasis: showEventLog ? "50%" : "100%" }}
 >
-          <Conversation messages={messages} />
+          <Conversation conversationItems={conversationItems} />
         </section>
 <section
   className={`flex-1 px-4 overflow-y-auto ${showEventLog ? "flex" : "hidden"}`}
@@ -173,6 +203,7 @@ export default function App() {
           <ToolPanel
             sendClientEvent={sendClientEvent}
             sendTextMessage={sendTextMessage}
+            addToConversation={addToConversation}
             events={events}
             isSessionActive={isSessionActive}
           />
