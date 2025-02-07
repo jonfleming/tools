@@ -1,4 +1,4 @@
-import { ArrowUp, ArrowDown } from "react-feather";
+import { User, Cpu } from "react-feather";
 import { useState } from "react";
 
 function ConversationItem({ item, timestamp }) {
@@ -13,20 +13,13 @@ function ConversationItem({ item, timestamp }) {
         onClick={() => setIsExpanded(!isExpanded)}
       >
         {isUser ? (
-          <ArrowDown className="text-blue-400" />
+          <User className="text-blue-400" />
         ) : (
-          <ArrowUp className="text-green-400" />
+          <Cpu className="text-green-400" />
         )}
         <div className="text-sm text-gray-500">
-          {item.role}
+          {item.content}
         </div>
-      </div>
-      <div
-        className={`text-gray-500 bg-gray-200 p-2 rounded-md overflow-x-auto ${
-          isExpanded ? "block" : "hidden"
-        }`}
-      >
-        <pre className="text-xs">{ item.content }</pre>
       </div>
     </div>
   );

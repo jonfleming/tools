@@ -7,7 +7,7 @@ import ToolPanel from "./ToolPanel";
 
 export default function App() {
   const [showConversation, setShowConversation] = useState(true);
-  const [showEventLog, setShowEventLog] = useState(true);
+  const [showEventLog, setShowEventLog] = useState(false);
   const [isSessionActive, setIsSessionActive] = useState(false);
   const [events, setEvents] = useState([]);
   const [dataChannel, setDataChannel] = useState(null);
@@ -112,7 +112,7 @@ export default function App() {
   }
 
   function addToConversation(item) {
-    setConversationItems((prev) => [item, ...prev]);
+    setConversationItems((prev) => [...prev, item]);
   }
 
   // Attach event listeners to the data channel when a new one is created
