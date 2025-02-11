@@ -4,6 +4,8 @@ import EventLog from "./EventLog";
 import Conversation from "./Conversation";
 import SessionControls from "./SessionControls";
 import ToolPanel from "./ToolPanel";
+import { createUser, createSession, addMessage } from './neo4jService';
+import { UserProvider, useUser } from './UserContext';
 
 export default function App() {
   const [showConversation, setShowConversation] = useState(true);
