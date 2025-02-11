@@ -9,7 +9,7 @@ const apiKey = process.env.OPENAI_API_KEY;
 
 // Configure Vite middleware for React client
 const vite = await createViteServer({
-  server: { middlewareMode: true },
+  server: { middlewareMode: true, host: "localhost" },
   appType: "custom",
 });
 app.use(vite.middlewares);
