@@ -172,42 +172,42 @@ export default function App() {
   }, [conversationItems]);  
 
   return (
-    <>
+    <UserProvider>
       <nav className="absolute top-0 left-0 right-0 h-16 flex items-center">
         <div className="flex items-center gap-4 w-full m-4 pb-2 border-0 border-b border-solid border-gray-200">
           <img style={{ width: "24px" }} src={logo} />
           <h1>realtime console</h1>
         </div>
       </nav>
-<main className="absolute top-16 left-0 right-0 bottom-0 flex flex-col justify-between" style={{ paddingRight: "380px" }}>
-<section
-  className={`flex-1 px-4 overflow-y-auto ${showConversation ? "flex" : "hidden"}`}
-  style={{ flexBasis: showEventLog ? "50%" : "100%" }}
->
+      <main className="absolute top-16 left-0 right-0 bottom-0 flex flex-col justify-between" style={{ paddingRight: "380px" }}>
+        <section
+          className={`flex-1 px-4 overflow-y-auto ${showConversation ? "flex" : "hidden"}`}
+          style={{ flexBasis: showEventLog ? "50%" : "100%" }}
+        >
           <Conversation conversationItems={conversationItems} />
         </section>
-<section
-  className={`flex-1 px-4 overflow-y-auto ${showEventLog ? "flex" : "hidden"}`}
-  style={{ flexBasis: showConversation ? "50%" : "100%" }}
->
+        <section
+          className={`flex-1 px-4 overflow-y-auto ${showEventLog ? "flex" : "hidden"}`}
+          style={{ flexBasis: showConversation ? "50%" : "100%" }}
+        >
           <EventLog events={events} />
         </section>
-<div className="px-4 flex justify-between">
-  <button className="mb-2 p-2 bg-blue-500 text-white rounded-md" onClick={() => setShowConversation(!showConversation)}>
-    {showConversation ? "Hide" : "Show"} Conversation
-  </button>
-  <button className="mb-2 p-2 bg-blue-500 text-white rounded-md" onClick={() => setShowEventLog(!showEventLog)}>
-    {showEventLog ? "Hide" : "Show"} Event Log
-  </button>
-  <SessionControls
-    startSession={startSession}
-    stopSession={stopSession}
-    sendClientEvent={sendClientEvent}
-    sendTextMessage={sendTextMessage}
-    events={events}
-    isSessionActive={isSessionActive}
-  />
-</div>
+        <div className="px-4 flex justify-between">
+          <button className="mb-2 p-2 bg-blue-500 text-white rounded-md" onClick={() => setShowConversation(!showConversation)}>
+            {showConversation ? "Hide" : "Show"} Conversation
+          </button>
+          <button className="mb-2 p-2 bg-blue-500 text-white rounded-md" onClick={() => setShowEventLog(!showEventLog)}>
+            {showEventLog ? "Hide" : "Show"} Event Log
+          </button>
+          <SessionControls
+            startSession={startSession}
+            stopSession={stopSession}
+            sendClientEvent={sendClientEvent}
+            sendTextMessage={sendTextMessage}
+            events={events}
+            isSessionActive={isSessionActive}
+          />
+        </div>
         <section className="absolute top-0 w-[380px] right-0 bottom-0 p-4 pt-0 overflow-y-auto">
           <ToolPanel
             sendClientEvent={sendClientEvent}
@@ -218,6 +218,6 @@ export default function App() {
           />
         </section>
       </main>
-    </>
+    </UserProvider>
   );
 }

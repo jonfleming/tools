@@ -14,7 +14,7 @@ export default {
   root: join(dirname(path), "client"),
   plugins: [react()],
   server: {
-    host: "localhost",
+    host: "host.docker.internal",
     port: 3000
   }
 };

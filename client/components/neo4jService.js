@@ -43,4 +43,17 @@ async function addMessage(sessionId, messageId, role, content, timestamp) {
     }
 }
 
-export { createUser, createSession, addMessage };
+async function linkMessages(previousMessageId, currentMessageId) {
+    const session = driver.session();
+    try {
+        await session.run(
+            'MATCH (m1:Message {message_id: $previousMessageId}), (m2:Message {message_id: $currentMessageId}) ' +
+            'CREATE (m1)-[:NEXT]->(m2)',
+            { previousMessageId, currentMessageId }
+        );
+    } finally {
+        await session.close();
+    }
+}
+
+export { createUser, createSession, addMessage, linkMessages };
