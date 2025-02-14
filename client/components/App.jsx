@@ -4,6 +4,7 @@ import EventLog from "./EventLog";
 import Conversation from "./Conversation";
 import SessionControls from "./SessionControls";
 import ToolPanel from "./ToolPanel";
+import AuthDialog from "./AuthDialog";
 
 export default function App() {
   const [showConversation, setShowConversation] = useState(true);
@@ -14,6 +15,8 @@ export default function App() {
   const peerConnection = useRef(null);
   const audioElement = useRef(null);
   const [conversationItems, setConversationItems] = useState([]);
+  const [showAuth, setShowAuth] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   async function startSession() {
     // Get an ephemeral key from the Fastify server
@@ -166,56 +169,88 @@ export default function App() {
   }, [dataChannel]);
 
   useEffect(() => {
-    // console.log("messages", messages);
+    console.log("messages", conversationItems);
   }, [conversationItems]);  
 
   return (
     <>
-      <nav className="absolute top-0 left-0 right-0 h-16 flex items-center">
-        <div className="flex items-center gap-4 w-full m-4 pb-2 border-0 border-b border-solid border-gray-200">
+      <nav className="absolute top-0 left-0 right-0 h-16 flex items-center justify-between">
+        <div className="flex items-center gap-4 m-4 pb-2">
           <img style={{ width: "24px" }} src={logo} />
           <h1>realtime console</h1>
         </div>
+        {isAuthenticated && (
+          <button
+            onClick={async () => {
+              const response = await fetch("/signout", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+              });
+              if (response.ok) {
+                setIsAuthenticated(false);
+                setShowAuth(true);
+              }
+            }}
+            className="mr-4 px-4 py-2 bg-red-500 text-white rounded"
+          >
+            Sign Out
+          </button>
+        )}
       </nav>
 <main className="absolute top-16 left-0 right-0 bottom-0 flex flex-col justify-between" style={{ paddingRight: "380px" }}>
-<section
-  className={`flex-1 px-4 overflow-y-auto ${showConversation ? "flex" : "hidden"}`}
-  style={{ flexBasis: showEventLog ? "50%" : "100%" }}
->
-          <Conversation conversationItems={conversationItems} />
-        </section>
-<section
-  className={`flex-1 px-4 overflow-y-auto ${showEventLog ? "flex" : "hidden"}`}
-  style={{ flexBasis: showConversation ? "50%" : "100%" }}
->
-          <EventLog events={events} />
-        </section>
-<div className="px-4 flex justify-between">
-  <button className="mb-2 p-2 bg-blue-500 text-white rounded-md" onClick={() => setShowConversation(!showConversation)}>
-    {showConversation ? "Hide" : "Show"} Conversation
-  </button>
-  <button className="mb-2 p-2 bg-blue-500 text-white rounded-md" onClick={() => setShowEventLog(!showEventLog)}>
-    {showEventLog ? "Hide" : "Show"} Event Log
-  </button>
-  <SessionControls
-    startSession={startSession}
-    stopSession={stopSession}
-    sendClientEvent={sendClientEvent}
-    sendTextMessage={sendTextMessage}
-    events={events}
-    isSessionActive={isSessionActive}
-  />
-</div>
-        <section className="absolute top-0 w-[380px] right-0 bottom-0 p-4 pt-0 overflow-y-auto">
-          <ToolPanel
-            sendClientEvent={sendClientEvent}
-            sendTextMessage={sendTextMessage}
-            addToConversation={addToConversation}
-            events={events}
-            isSessionActive={isSessionActive}
-          />
-        </section>
-      </main>
+  {showAuth && !isAuthenticated && (
+    <AuthDialog
+      onClose={() => {
+        setShowAuth(false);
+        setIsAuthenticated(true);
+      }}
+    />
+  )}
+  
+  {isAuthenticated ? (
+    <>
+      <section
+        className={`flex-1 px-4 overflow-y-auto ${showConversation ? "flex" : "hidden"}`}
+        style={{ flexBasis: showEventLog ? "50%" : "100%" }}
+      >
+        <Conversation conversationItems={conversationItems} />
+      </section>
+      <section
+        className={`flex-1 px-4 overflow-y-auto ${showEventLog ? "flex" : "hidden"}`}
+        style={{ flexBasis: showConversation ? "50%" : "100%" }}
+      >
+        <EventLog events={events} />
+      </section>
+      <div className="px-4 flex justify-between">
+        <button className="mb-2 p-2 bg-blue-500 text-white rounded-md" onClick={() => setShowConversation(!showConversation)}>
+          {showConversation ? "Hide" : "Show"} Conversation
+        </button>
+        <button className="mb-2 p-2 bg-blue-500 text-white rounded-md" onClick={() => setShowEventLog(!showEventLog)}>
+          {showEventLog ? "Hide" : "Show"} Event Log
+        </button>
+        <SessionControls
+          startSession={startSession}
+          stopSession={stopSession}
+          sendClientEvent={sendClientEvent}
+          sendTextMessage={sendTextMessage}
+          events={events}
+          isSessionActive={isSessionActive}
+        />
+      </div>
+      <section className="absolute top-0 w-[380px] right-0 bottom-0 p-4 pt-0 overflow-y-auto">
+        <ToolPanel
+          sendClientEvent={sendClientEvent}
+          sendTextMessage={sendTextMessage}
+          addToConversation={addToConversation}
+          events={events}
+          isSessionActive={isSessionActive}
+        />
+      </section>
+    </>
+  ) : null}
+</main>
     </>
   );
 }

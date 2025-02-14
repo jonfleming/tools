@@ -2,8 +2,16 @@ import express from "express";
 import fs from "fs";
 import { createServer as createViteServer } from "vite";
 import "dotenv/config";
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 const app = express();
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
 const port = process.env.PORT || 3000;
 const apiKey = process.env.OPENAI_API_KEY;
 
@@ -40,6 +48,77 @@ app.get("/token", async (req, res) => {
   }
 });
 
+app.post("/signup", async (req, res) => {
+  const { email, password } = req.body;
+  const { user, error } = await supabase.auth.signUp({ email, password });
+  if (error) {
+    return res.status(400).json({ error: error.message });
+  }
+  res.json({ user });
+});
+
+app.post("/signin", async (req, res) => {
+  const { email, password } = req.body;
+  const { user, error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error) {
+    return res.status(400).json({ error: error.message });
+  }
+  res.json({ user });
+});
+
+app.post("/signout", async (req, res) => {
+  const { error } = await supabase.auth.signOut();
+  if (error) {
+    return res.status(400).json({ error: error.message });
+  }
+  res.json({ message: "User signed out" });
+});
+
+// Add this with your other auth endpoints
+app.post("/resend-confirmation", async (req, res) => {
+  const { email } = req.body;
+  
+  try {
+    const { data, error } = await supabase.auth.resend({
+      type: 'signup',
+      email: email,
+    });
+
+    if (error) {
+      return res.status(400).json({ error: error.message });
+    }
+    
+    res.json({ message: "Confirmation email resent successfully" });
+  } catch (err) {
+    console.error("Resend confirmation error:", err);
+    res.status(500).json({ error: "Failed to resend confirmation email" });
+  }
+});
+
+// Update the /auth endpoint to handle email confirmation
+app.post("/auth", async (req, res) => {
+  try {
+    const { access_token, refresh_token } = req.body;
+    
+    // Exchange the tokens received from the email confirmation
+    const { data, error } = await supabase.auth.verifyOtp({
+      token_hash: access_token,
+      type: 'email'
+    });
+
+    if (error) {
+      console.error("Auth verification error:", error);
+      return res.status(400).json({ error: error.message });
+    }
+
+    // Redirect to the main application after successful verification
+    res.redirect('/?verified=true');
+  } catch (err) {
+    console.error("Auth error:", err);
+    res.status(500).json({ error: "Authentication failed" });
+  }
+});
+
 // Render the React client
 app.use("*", async (req, res, next) => {
   const url = req.originalUrl;
@@ -62,3 +141,4 @@ app.use("*", async (req, res, next) => {
 app.listen(port, () => {
   console.log(`Express server running on *:${port}`);
 });
+
