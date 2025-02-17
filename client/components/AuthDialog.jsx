@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react"; // Add useRef import
 import PropTypes from 'prop-types';
 
 export default function AuthDialog({ onClose }) {
@@ -6,9 +6,12 @@ export default function AuthDialog({ onClose }) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isAwaitingVerification, setIsAwaitingVerification] = useState(false);
+  const emailInputRef = useRef(null); // Add ref for email input
 
-  // Add effect to check for verification
   useEffect(() => {
+    // Focus the email input when component mounts
+    emailInputRef.current?.focus();
+
     const queryParams = new URLSearchParams(window.location.search);
     const verified = queryParams.get('verified');
     
@@ -95,6 +98,7 @@ export default function AuthDialog({ onClose }) {
           </div>
         )}
         <input
+          ref={emailInputRef} // Add ref to email input
           type="email"
           placeholder="Email"
           value={email}

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import logo from "/assets/relevantic.ico";
 import EventLog from "./EventLog";
 import Conversation from "./Conversation";
@@ -141,13 +141,6 @@ export default function App() {
   async function addToConversation(item) {
     setConversationItems((prev) => [...prev, item]);
 
-    // Compute embeddings (this is a placeholder, implement your actual embedding logic)
-    // const embedding = await computeEmbedding(item.content);
-    if (!topic) {
-      item.topic = await getSummary(item.content);
-      setTopic(item.topic);      
-    }
-
     if (!session) {
       // setSession to uuid
       item.session = crypto.randomUUID();
@@ -156,6 +149,10 @@ export default function App() {
 
     if (item.role === "user") {
       setItemID(item.input_item_id);
+      if (!topic) {
+        item.topic = await getSummary(item.content);
+        setTopic(item.topic);      
+      }
     } else {
       item.input_item_id = itemID;
     }

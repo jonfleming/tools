@@ -8,12 +8,41 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
+const model = "gpt-4o-mini";
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 const port = process.env.PORT || 3000;
 const apiKey = process.env.OPENAI_API_KEY;
+
+// Add this function after the imports and before the route handlers
+async function getEmbeddings(text) {
+  try {
+    const response = await fetch("https://api.openai.com/v1/embeddings", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model: "text-embedding-ada-002",
+        input: text
+      })
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error?.message || 'OpenAI API error');
+    }
+
+    const data = await response.json();
+    return data.data[0].embedding;
+  } catch (error) {
+    console.error("Error getting embeddings:", error);
+    throw error;
+  }
+}
 
 // Configure Vite middleware for React client
 const vite = await createViteServer({
@@ -119,13 +148,17 @@ app.post("/auth", async (req, res) => {
   }
 });
 
+// Modify the save-conversation-item handler to include embeddings
 app.post("/save-conversation-item", async (req, res) => {
   const { item } = req.body;
   console.log("Saving conversation item:", item);
 
   try {
+    // Get embeddings for the content
+    const embeddings = await getEmbeddings(item.content);
+
     const { data, error } = await supabase
-      .from('conversation_items') // Ensure this table exists in your Supabase database
+      .from('conversation_items')
       .insert([{ 
         content: item.content,
         role: item.role,
@@ -133,7 +166,10 @@ app.post("/save-conversation-item", async (req, res) => {
         output_item_id: item.output_item_id,
         type: item.type,
         user: item.user,
-        session: item.session}]);
+        session: item.session,
+        topic: item.topic,
+        embeddings: embeddings // Add embeddings to the database record
+      }]);
 
     if (error) {
       return res.status(400).json({ error: error.message });
@@ -143,6 +179,45 @@ app.post("/save-conversation-item", async (req, res) => {
   } catch (error) {
     console.error("Error saving conversation item:", error);
     res.status(500).json({ error: "Failed to save conversation item" });
+  }
+});
+
+app.post("/completion", async (req, res) => {
+  const { text } = req.body;
+
+  if (!text) {
+    return res.status(400).json({ error: "Text is required for completions" });
+  }
+
+  const payload = {
+    model: model,
+    messages: [
+      { role: "system", content: "You are a helpful assistant." },
+      { role: "user", content: `Extract a short title from this text: ${text}` },
+    ]
+  }
+
+  try {
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error?.message || 'OpenAI API error');
+    }
+
+    const data = await response.json();
+    const title = data.choices[0].message.content
+    res.json({ title });    
+  } catch (error) {
+    console.error("Chat completion error:", error);
+    res.status(500).json({ error: error.message || "Failed to get completion" });
   }
 });
 
