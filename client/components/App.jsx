@@ -125,10 +125,18 @@ export default function App() {
     sendClientEvent({ type: "response.create" });
   }
 
-  function getSummary(text) {
-    // Send text to server with the prompt "Extract a short title from this text: $(text)"
-    // Use OpenAI completions API to get the summary
-    return text
+  async function getSummary(text) {
+    const response = await fetch('/completion', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: text
+      })
+    };
+    
+    const data = await response.json();
+    return data.title;
   }
 
   async function addToConversation(item) {
@@ -137,7 +145,7 @@ export default function App() {
     // Compute embeddings (this is a placeholder, implement your actual embedding logic)
     // const embedding = await computeEmbedding(item.content);
     if (!topic) {
-      item.topic = getSummary(item.content);
+      item.topic = await getSummary(item.content);
       setTopic(item.topic);      
     }
 
