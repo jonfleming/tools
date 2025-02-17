@@ -81,7 +81,6 @@ function FunctionCallOutput({ functionCallOutput }) {
 export default function ToolPanel({
   isSessionActive,
   sendClientEvent,
-  addToConversation,
   events,
 }) {
   const [functionAdded, setFunctionAdded] = useState(false);

@@ -59,11 +59,11 @@ app.post("/signup", async (req, res) => {
 
 app.post("/signin", async (req, res) => {
   const { email, password } = req.body;
-  const { user, error } = await supabase.auth.signInWithPassword({ email, password });
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) {
     return res.status(400).json({ error: error.message });
   }
-  res.json({ user });
+  res.json(data);
 });
 
 app.post("/signout", async (req, res) => {
@@ -79,7 +79,7 @@ app.post("/resend-confirmation", async (req, res) => {
   const { email } = req.body;
   
   try {
-    const { data, error } = await supabase.auth.resend({
+    const { error } = await supabase.auth.resend({
       type: 'signup',
       email: email,
     });
@@ -98,10 +98,10 @@ app.post("/resend-confirmation", async (req, res) => {
 // Update the /auth endpoint to handle email confirmation
 app.post("/auth", async (req, res) => {
   try {
-    const { access_token, refresh_token } = req.body;
+    const { access_token } = req.body;
     
     // Exchange the tokens received from the email confirmation
-    const { data, error } = await supabase.auth.verifyOtp({
+    const { error } = await supabase.auth.verifyOtp({
       token_hash: access_token,
       type: 'email'
     });
@@ -116,6 +116,33 @@ app.post("/auth", async (req, res) => {
   } catch (err) {
     console.error("Auth error:", err);
     res.status(500).json({ error: "Authentication failed" });
+  }
+});
+
+app.post("/save-conversation-item", async (req, res) => {
+  const { item } = req.body;
+  console.log("Saving conversation item:", item);
+
+  try {
+    const { data, error } = await supabase
+      .from('conversation_items') // Ensure this table exists in your Supabase database
+      .insert([{ 
+        content: item.content,
+        role: item.role,
+        input_item_id: item.input_item_id,
+        output_item_id: item.output_item_id,
+        type: item.type,
+        user: item.user,
+        session: item.session}]);
+
+    if (error) {
+      return res.status(400).json({ error: error.message });
+    }
+
+    res.json({ data });
+  } catch (error) {
+    console.error("Error saving conversation item:", error);
+    res.status(500).json({ error: "Failed to save conversation item" });
   }
 });
 
@@ -141,4 +168,3 @@ app.use("*", async (req, res, next) => {
 app.listen(port, () => {
   console.log(`Express server running on *:${port}`);
 });
-

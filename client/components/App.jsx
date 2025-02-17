@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import logo from "/assets/openai-logomark.svg";
+import logo from "/assets/relevantic.ico";
 import EventLog from "./EventLog";
 import Conversation from "./Conversation";
 import SessionControls from "./SessionControls";
@@ -17,6 +17,10 @@ export default function App() {
   const [conversationItems, setConversationItems] = useState([]);
   const [showAuth, setShowAuth] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [user, setUser] = useState(null);
+  const [session, setSession] = useState(null);
+  const [topic, setTopic] = useState("");
+  const [itemID, setItemID] = useState("");
 
   async function startSession() {
     // Get an ephemeral key from the Fastify server
@@ -121,36 +125,73 @@ export default function App() {
     sendClientEvent({ type: "response.create" });
   }
 
-  function addToConversation(item) {
-    setConversationItems((prev) => [...prev, item]);
+  function getSummary(text) {
+    // Send text to server with the prompt "Extract a short title from this text: $(text)"
+    // Use OpenAI completions API to get the summary
+    return text
   }
+
+  async function addToConversation(item) {
+    setConversationItems((prev) => [...prev, item]);
+
+    // Compute embeddings (this is a placeholder, implement your actual embedding logic)
+    // const embedding = await computeEmbedding(item.content);
+    if (!topic) {
+      item.topic = getSummary(item.content);
+      setTopic(item.topic);      
+    }
+
+    if (!session) {
+      // setSession to uuid
+      item.session = crypto.randomUUID();
+      setSession(item.session);
+    }
+
+    if (item.role === "user") {
+      setItemID(item.input_item_id);
+    } else {
+      item.input_item_id = itemID;
+    }
+
+    item.user = user;
+
+    // Save to Supabase
+    await fetch("/save-conversation-item", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ item }),
+    });
+  }    
 
   // Attach event listeners to the data channel when a new one is created
   useEffect(() => {
     if (dataChannel) {
       // Append new server events to the list
       dataChannel.addEventListener("message", (e) => {
+        console.log("Event:", e);
         const data = JSON.parse(e.data);
         setEvents((prev) => [data, ...prev]);
 
         switch (data.type) {
-          case "response.audio_transcript.done":
-            // compute embbedding and add a conversation item - sendClientEvent(conversation.item.create)
-            console.log("transcript: ", data.transcript)
+          case "conversation.item.input_audio_transcription.completed":
+            console.log("transcript: ",data.transcript)
             addToConversation({
-              item_id: crypto.randomUUID(),
+              input_item_id: crypto.randomUUID(),
               type: "input_text",
-              role: "assistant",
+              role: "user",
               timestamp: new Date().toLocaleTimeString(),
               content: data.transcript,
             });
             break;
-          case "conversation.item.input_audio_transcription.completed":
-            console.log("transcript: ",data.transcript)
+          case "response.audio_transcript.done":
+            // compute embbedding and add a conversation item - sendClientEvent(conversation.item.create)
+            console.log("transcript: ", data.transcript)
             addToConversation({
-              item_id: crypto.randomUUID(),
+              output_item_id: crypto.randomUUID(),
               type: "input_text",
-              role: "user",
+              role: "assistant",
               timestamp: new Date().toLocaleTimeString(),
               content: data.transcript,
             });
@@ -177,7 +218,7 @@ export default function App() {
       <nav className="absolute top-0 left-0 right-0 h-16 flex items-center justify-between">
         <div className="flex items-center gap-4 m-4 pb-2">
           <img style={{ width: "24px" }} src={logo} />
-          <h1>realtime console</h1>
+          <h1>Relevantic Recall</h1>
         </div>
         {isAuthenticated && (
           <button
@@ -202,9 +243,11 @@ export default function App() {
 <main className="absolute top-16 left-0 right-0 bottom-0 flex flex-col justify-between" style={{ paddingRight: "380px" }}>
   {showAuth && !isAuthenticated && (
     <AuthDialog
-      onClose={() => {
+      onClose={(user) => {
         setShowAuth(false);
         setIsAuthenticated(true);
+        setUser(user);
+        setSession(crypto.randomUUID());
       }}
     />
   )}

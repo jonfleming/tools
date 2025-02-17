@@ -73,10 +73,10 @@ export default function AuthDialog({ onClose }) {
         },
         body: JSON.stringify({ email, password }),
       });
-      const data = await response.json();
+      const {user} = await response.json();
       if (response.ok) {
-        console.log("User signed in:", data.user);
-        onClose();
+        console.log("User signed in:", user);
+        onClose(user.email);
       } else {
         setError(data.error || "Failed to sign in");
       }
