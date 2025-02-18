@@ -122,11 +122,18 @@ export default function App() {
     };
 
     sendClientEvent(event);
+    addToConversation({
+      item_id: crypto.randomUUID(),
+      type: "input_text",
+      role: "user",
+      timestamp: new Date().toLocaleTimeString(),
+      content: message,
+    });
     sendClientEvent({ type: "response.create" });
   }
 
   async function getSummary(text) {
-    const response = await fetch('/completion', {
+    const response = await fetch('/topic', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -135,26 +142,33 @@ export default function App() {
     });
     
     const data = await response.json();
-    return data.title;
+    return data.content;
   }
 
   async function addToConversation(item) {
     setConversationItems((prev) => [...prev, item]);
 
+    if (!item.content.trim()) {
+      return;
+    }
+
     if (!session) {
       // setSession to uuid
       item.session = crypto.randomUUID();
       setSession(item.session);
+    } else {
+      item.session = session;
     }
 
     if (item.role === "user") {
-      setItemID(item.input_item_id);
+      setItemID(item.item_id);
       if (!topic) {
         item.topic = await getSummary(item.content);
         setTopic(item.topic);      
       }
     } else {
-      item.input_item_id = itemID;
+      item.topic = topic;
+      item.input_item_id = itemID; // assistant response should be linked to the user input
     }
 
     item.user = user;
@@ -174,15 +188,15 @@ export default function App() {
     if (dataChannel) {
       // Append new server events to the list
       dataChannel.addEventListener("message", (e) => {
-        console.log("Event:", e);
+        // Log Events console.log("Event:", e);
         const data = JSON.parse(e.data);
         setEvents((prev) => [data, ...prev]);
 
         switch (data.type) {
           case "conversation.item.input_audio_transcription.completed":
-            console.log("transcript: ",data.transcript)
+            console.log("User transcript: ",e, data.transcript)
             addToConversation({
-              input_item_id: crypto.randomUUID(),
+              item_id: crypto.randomUUID(),
               type: "input_text",
               role: "user",
               timestamp: new Date().toLocaleTimeString(),
@@ -190,10 +204,9 @@ export default function App() {
             });
             break;
           case "response.audio_transcript.done":
-            // compute embbedding and add a conversation item - sendClientEvent(conversation.item.create)
-            console.log("transcript: ", data.transcript)
+            console.log("Assistant transcript: ", e, data.transcript)
             addToConversation({
-              output_item_id: crypto.randomUUID(),
+              item_id: crypto.randomUUID(),
               type: "input_text",
               role: "assistant",
               timestamp: new Date().toLocaleTimeString(),

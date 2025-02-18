@@ -56,15 +56,6 @@ describe('Server API Tests', () => {
       return res.status(200).json({ token: 'test-token' });
     });
 
-    app.post('/completion', (req, res) => {
-      const text = req.body;
-      // Mock implementation for completion
-      if (text) {
-        return res.status(200).json({ title: 'Test Title' });
-      }
-      return res.status(400).json({ error: 'Text is required' });
-    });
-
     app.post('/save-conversation-item', (req, res) => {
       const { item } = req.body;
       // Mock implementation for saving conversation item
@@ -72,6 +63,29 @@ describe('Server API Tests', () => {
         return res.status(200).json({ data: item });
       }
       return res.status(400).json({ error: 'Embeddings are required' });
+    });
+
+    app.post('/extract-entity', (req, res) => {
+      const { text } = req.body;
+      if (!text) {
+        return res.status(400).json({ error: 'Text is required' });
+      }
+      return res.status(200).json({
+        organizations: ['Apple Inc.'],
+        persons: ['Steve Jobs'],
+        locations: ['California']
+      });
+    });
+
+    app.post('/topic', (req, res) => {
+      const { text } = req.body;
+      if (!text) {
+        return res.status(400).json({ error: 'Text is required' });
+      }
+      return res.status(200).json({
+        mainTopic: 'Climate Change',
+        subTopics: ['Environmental Science', 'Ecosystems', 'Global Warming']
+      });
     });
 
     createClient.mockReturnValue(mockSupabase);
@@ -144,21 +158,53 @@ describe('Server API Tests', () => {
       expect(response.body).toEqual(mockToken);
     });
 
-    test('POST /completion - success', async () => {
-      const mockCompletion = { choices: [{ text: 'Test Title' }] };
-      global.fetch = jest.fn(() =>
-        Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve(mockCompletion)
-        })
-      );
+    test('POST /extract-entity - successful extraction', async () => {
+      const mockText = 'Apple Inc. was founded by Steve Jobs in California';
+      const mockEntities = {
+        organizations: ['Apple Inc.'],
+        persons: ['Steve Jobs'],
+        locations: ['California']
+      };
 
       const response = await request(app)
-        .post('/completion')
-        .send('Test input text');
+        .post('/extract-entity')
+        .send({ text: mockText });
 
       expect(response.status).toBe(200);
-      expect(response.body).toEqual({ title: 'Test Title' });
+      expect(response.body).toEqual(mockEntities);
+    });
+
+    test('POST /extract-entity - handles empty text', async () => {
+      const response = await request(app)
+        .post('/extract-entity')
+        .send({ text: '' });
+
+      expect(response.status).toBe(400);
+      expect(response.body).toEqual({ error: 'Text is required' });
+    });
+
+    test('POST /topic - successful topic extraction', async () => {
+      const mockText = 'The effects of climate change on global ecosystems';
+      const mockTopics = {
+        mainTopic: 'Climate Change',
+        subTopics: ['Environmental Science', 'Ecosystems', 'Global Warming']
+      };
+
+      const response = await request(app)
+        .post('/topic')
+        .send({ text: mockText });
+
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual(mockTopics);
+    });
+
+    test('POST /topic - handles empty text', async () => {
+      const response = await request(app)
+        .post('/topic')
+        .send({ text: '' });
+
+      expect(response.status).toBe(400);
+      expect(response.body).toEqual({ error: 'Text is required' });
     });
   });
 

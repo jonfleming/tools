@@ -44,6 +44,54 @@ async function getEmbeddings(text) {
   }
 }
 
+async function getCompletion(prompt) {
+  const payload = {
+    model: model,
+    messages: [
+      { role: "system", content: "You are a helpful assistant." },
+      { role: "user", content: prompt },
+    ]
+  };
+
+  try {
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error?.message || 'OpenAI API error');
+    }
+
+    const data = await response.json();
+    const content = data.choices[0].message.content;
+    return { content, error: null };
+  } catch (error) {
+    console.error("Chat completion error:", error);
+    return {content: null, error};
+  }
+}
+
+async function getEntities(statement) {
+  const prompt = `Identify and extract entities from the following statement.
+  Categorize them into these types: Person, Organization, Job Title, Place, Product, Service.
+  Return the result as a JSON object where keys are entity types and values are arrays of entity names.
+
+  Statement: "${statement}"
+
+  JSON Output:`;  
+
+
+  const response = await getCompletion(prompt);
+
+  return response;
+}
+
 // Configure Vite middleware for React client
 const vite = await createViteServer({
   server: { middlewareMode: true },
@@ -151,19 +199,21 @@ app.post("/auth", async (req, res) => {
 // Modify the save-conversation-item handler to include embeddings
 app.post("/save-conversation-item", async (req, res) => {
   const { item } = req.body;
-  console.log("Saving conversation item:", item);
+
+  if (!item.content || (item.role ==='assistan' && !item.input_item_id)) {
+    return res.status(200).json({ data: "Content and item ID are required for conversation items" });
+  }
 
   try {
     // Get embeddings for the content
     const embeddings = await getEmbeddings(item.content);
-
     const { data, error } = await supabase
       .from('conversation_items')
       .insert([{ 
         content: item.content,
         role: item.role,
+        item_id: item.item_id,
         input_item_id: item.input_item_id,
-        output_item_id: item.output_item_id,
         type: item.type,
         user: item.user,
         session: item.session,
@@ -174,6 +224,11 @@ app.post("/save-conversation-item", async (req, res) => {
     if (error) {
       return res.status(400).json({ error: error.message });
     }
+    
+    if (item.role === 'user') {
+      const entities = await getEntities(item.content);
+      console.log("Extracted entities:", entities);
+    }
 
     res.json({ data });
   } catch (error) {
@@ -182,43 +237,41 @@ app.post("/save-conversation-item", async (req, res) => {
   }
 });
 
-app.post("/completion", async (req, res) => {
-  const { text } = req.body;
+app.post("/extract-entity", async (req, res) => {  
+  const { statement } = req.body;
+  
+  if (!text) {
+    return res.status(400).json({ error: "Text is required for completions" });
+  }
+  
+  const { content, error } = await getEntities(statement);
+  
+  if (error) {
+    return res.status(400).json({ error });
+  }
 
+  const entities = JSON.parse(content);
+  const response = { entities };  
+  
+  return res.json({ response });
+});
+
+app.post("/topic", async (req, res) => {
+  const { text } = req.body;
+  
   if (!text) {
     return res.status(400).json({ error: "Text is required for completions" });
   }
 
-  const payload = {
-    model: model,
-    messages: [
-      { role: "system", content: "You are a helpful assistant." },
-      { role: "user", content: `Extract a short title from this text: ${text}` },
-    ]
+  const prompt = `Extract a short title from this text: ${text}`;
+
+  const { content, error } = await getCompletion(prompt);
+  
+  if (error) {
+    return res.status(400).json({ error });
   }
-
-  try {
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${apiKey}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(payload)
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error?.message || 'OpenAI API error');
-    }
-
-    const data = await response.json();
-    const title = data.choices[0].message.content
-    res.json({ title });    
-  } catch (error) {
-    console.error("Chat completion error:", error);
-    res.status(500).json({ error: error.message || "Failed to get completion" });
-  }
+  
+  return res.json({ content });    
 });
 
 // Render the React client
