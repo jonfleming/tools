@@ -3,7 +3,7 @@ import fs from "fs";
 import { createServer as createViteServer } from "vite";
 import "dotenv/config";
 import { createClient } from "@supabase/supabase-js";
-import { getEmbeddings, getCompletion, getEntities, getRelationships } from "./utils/llm.js";
+import { getEmbeddings, getCompletion, getEntities, getRelationships, classifyText } from "./utils/llm.js";
 import { updateGraphDB } from "./utils/graphdb.js";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -152,16 +152,21 @@ app.post("/save-conversation-item", async (req, res) => {
     }
     
     if (item.role === "user") {
-      const entities = await getEntities(item.content);
-      console.log("Extracted entities:", entities);
+      const classification = await classifyText(item.content);
+      console.log("Classified text:", classification);
 
-      // Make sure entities has at least one entity
-      // entities is an object with keys that are entity types and values that are arrays of entity names
-      if (Object.keys(entities).length > 0) {
-        const relationships = await getRelationships(item.content, entities);
-        console.log("Extracted relationships:", relationships);
-  
-        updateGraphDB(entities, relationships);   
+      if (classification === "statement") {
+        const entities = await getEntities(item.content);
+        console.log("Extracted entities:", entities);
+
+        // Make sure entities has at least one entity
+        // entities is an object with keys that are entity types and values that are arrays of entity names
+        if (Object.keys(entities).length > 0) {
+          const relationships = await getRelationships(item.content, entities);
+          console.log("Extracted relationships:", relationships);
+    
+          updateGraphDB(entities, relationships);   
+        }
       }
     }
 
