@@ -155,10 +155,14 @@ app.post("/save-conversation-item", async (req, res) => {
       const entities = await getEntities(item.content);
       console.log("Extracted entities:", entities);
 
-      const relationships = await getRelationships(item.content, entities);
-      console.log("Extracted relationships:", relationships);
-
-      updateGraphDB(entities, relationships); 
+      // Make sure entities has at least one entity
+      // entities is an object with keys that are entity types and values that are arrays of entity names
+      if (Object.keys(entities).length > 0) {
+        const relationships = await getRelationships(item.content, entities);
+        console.log("Extracted relationships:", relationships);
+  
+        updateGraphDB(entities, relationships);   
+      }
     }
 
     res.json({ data });

@@ -102,7 +102,7 @@ export async function getEmbeddings(text) {
   }
   
   export function parseCodeBlock(text) {
-    const start= text.indexOf("```");
+    const start= text.lastIndexOf("```", -3);
     let json = null;
   
     if (start !== -1) {
@@ -126,7 +126,13 @@ export async function getEmbeddings(text) {
   
       return json
     }
-    return JSON.parse(text); // Return original text if no delimiters found
+
+    try {
+      // Try to parse the entire text as JSON
+      return JSON.parse(text);
+    } catch (error) {
+      return [];
+    }
   }
   
   

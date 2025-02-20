@@ -171,6 +171,7 @@ export default function App() {
         item.topic = topic;
       }
 
+      console.log("Adding user item to conversation:", item);
       setConversationItems((prev) => [...prev, item]);
 
       setContent(item.content);
@@ -181,8 +182,6 @@ export default function App() {
       setItemType(item.type);
       setUser(item.user);
       setInputItemID(item.item_id);
-
-      setResponseReady(false);
 
       // Save to Supabase
       await fetch("/save-conversation-item", {
@@ -244,12 +243,13 @@ export default function App() {
       });
     }
   }, [dataChannel]);
-
   
   useEffect(() => {
-    if (responseReady) {
+    console.log("Change detected in responseReady or inputItemID:", responseReady, inputItemID);
+    if (responseReady && inputItemID) {
       // Wait until state has updated before setting response item from state
-      console.log("response state ready");
+      setResponseReady(false);
+
       const item = {
         content: content,
         item_id: itemID,
@@ -261,7 +261,11 @@ export default function App() {
         user: user,
       };
 
+      console.log("Adding assistant item to conversation:", item);
       setConversationItems((prev) => [...prev, item]);
+
+      setInputItemID("");
+      setResponseReady(false);
       
       // Save to Supabase
       fetch("/save-conversation-item", {
@@ -271,9 +275,9 @@ export default function App() {
         },
         body: JSON.stringify({ item }),
       });      
-
     }
   }, [responseReady]);  
+
 
   useEffect(() => {
     console.log("messages", conversationItems);
