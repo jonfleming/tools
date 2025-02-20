@@ -2,7 +2,6 @@ import { jest } from '@jest/globals';
 import request from 'supertest';
 import express from 'express';
 import { createClient } from '@supabase/supabase-js';
-import fs from 'fs';
 
 // server.test.js
 

@@ -17,10 +17,15 @@ export default function App() {
   const [conversationItems, setConversationItems] = useState([]);
   const [showAuth, setShowAuth] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [user, setUser] = useState(null);
+  const [content, setContent] = useState("");
+  const [inputItemID, setInputItemID] = useState("");
+  const [itemID, setItemID] = useState("");
+  const [itemType, setItemType] = useState("");
+  const [responseReady, setResponseReady] = useState(false);
+  const [role, setRole] = useState("user");
   const [session, setSession] = useState(null);
   const [topic, setTopic] = useState("");
-  const [itemID, setItemID] = useState("");
+  const [user, setUser] = useState(null);
 
   async function startSession() {
     // Get an ephemeral key from the Fastify server
@@ -146,41 +151,55 @@ export default function App() {
   }
 
   async function addToConversation(item) {
-    setConversationItems((prev) => [...prev, item]);
-
     if (!item.content.trim()) {
       return;
     }
 
-    if (!session) {
-      // setSession to uuid
-      item.session = crypto.randomUUID();
-      setSession(item.session);
-    } else {
-      item.session = session;
-    }
-
     if (item.role === "user") {
-      setItemID(item.item_id);
+      item.user = user;
+
+      if (!session) {
+        // setSession to uuid
+        item.session = crypto.randomUUID();
+      } else {
+        item.session = session;
+      }
+  
       if (!topic) {
         item.topic = await getSummary(item.content);
-        setTopic(item.topic);      
+      } else {
+        item.topic = topic;
       }
+
+      setConversationItems((prev) => [...prev, item]);
+
+      setContent(item.content);
+      setItemID(item.item_id);
+      setRole(item.role);
+      setSession(item.session);
+      setTopic(item.topic);
+      setItemType(item.type);
+      setUser(item.user);
+      setInputItemID(item.item_id);
+
+      setResponseReady(false);
+
+      // Save to Supabase
+      await fetch("/save-conversation-item", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ item }),
+      });
     } else {
-      item.topic = topic;
-      item.input_item_id = itemID; // assistant response should be linked to the user input
+      setContent(item.content);
+      setItemID(item.item_id);
+      setRole(item.role);
+      setItemType(item.type);
+
+      setResponseReady(true);
     }
-
-    item.user = user;
-
-    // Save to Supabase
-    await fetch("/save-conversation-item", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ item }),
-    });
   }    
 
   // Attach event listeners to the data channel when a new one is created
@@ -225,6 +244,36 @@ export default function App() {
       });
     }
   }, [dataChannel]);
+
+  
+  useEffect(() => {
+    if (responseReady) {
+      // Wait until state has updated before setting response item from state
+      console.log("response state ready");
+      const item = {
+        content: content,
+        item_id: itemID,
+        input_item_id: inputItemID,
+        type: itemType,
+        role: role,
+        session: session,
+        topic: topic, 
+        user: user,
+      };
+
+      setConversationItems((prev) => [...prev, item]);
+      
+      // Save to Supabase
+      fetch("/save-conversation-item", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ item }),
+      });      
+
+    }
+  }, [responseReady]);  
 
   useEffect(() => {
     console.log("messages", conversationItems);
