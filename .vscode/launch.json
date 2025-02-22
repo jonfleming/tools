@@ -2,6 +2,12 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "command": "npm run dev",
+            "name": "npm run dev",
+            "request": "launch",
+            "type": "node-terminal"
+        },
+        {
             "name": "Attach",
             "port": 9229,
             "request": "attach",
@@ -9,7 +15,7 @@
                 "<node_internals>/**"
             ],
             "type": "node"
-        },
+        },        
         {
             "type": "node",
             "name": "Debug Jest Tests",

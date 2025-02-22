@@ -11,6 +11,7 @@ export default async () => {
       '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
       '\\.(jpg|jpeg|png|gif|ico)$': '<rootDir>/mocks/fileMock.js',
     },
-    "resolver": undefined
+    resolver: undefined,
+    // extensionsToTreatAsEsm: ['.js'], // Remove this line
   };
 };

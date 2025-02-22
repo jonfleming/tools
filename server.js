@@ -126,7 +126,7 @@ app.post("/auth", async (req, res) => {
 app.post("/save-conversation-item", async (req, res) => {
   const { item } = req.body;
 
-  if (!item.content || (item.role ==="assistan" && !item.input_item_id)) {
+  if (!item.content || (item.role ==="assistant" && !item.input_item_id)) {
     return res.status(200).json({ data: "Content and item ID are required for conversation items" });
   }
 
@@ -168,9 +168,35 @@ app.post("/save-conversation-item", async (req, res) => {
           updateGraphDB(entities, relationships);   
         }
       }
+
+      const { data: contextData, error: contextError } = await supabase
+        .rpc("match_conversation_items", {
+          match_count: 3,
+          match_threshold: 0.8,
+          query_embeddings: embeddings});
+      
+      if (contextError) {
+        return res.status(400).json({ error: contextError.message });
+      }
+
+      const context = contextData.map(item => ({
+        content: item.content,
+        role: item.role,
+        item_id: item.item_id,
+        input_item_id: item.input_item_id,
+        type: item.type,
+        user: item.user,
+        session: item.session,
+        topic: item.topic,
+        similarity: item.similarity
+      }));
+
+      // Return the context along with the saved item
+      return res.json({ context });
     }
 
-    res.json({ data });
+    // Use vector search to find similar items for context
+    res.status(200).json({ message: "Conversation item saved successfully" });
   } catch (error) {
     console.error("Error saving conversation item:", error);
     res.status(500).json({ error: "Failed to save conversation item" });
@@ -233,6 +259,6 @@ app.use("*", async (req, res, next) => {
   }
 });
 
-app.listen(port, () => {
+app.listen(port, "localhost", () => {
   console.log(`Express server running on *:${port}`);
 });

@@ -2,6 +2,7 @@ const apiKey = process.env.OPENAI_API_KEY;
 const model = "gpt-4o-mini";
 const openAiUrl = "https://api.openai.com/v1";
 
+// Takes a string and returns a vector (Array[1536])
 export async function getEmbeddings(text) {
   try {
     const response = await fetch(`${openAiUrl}/embeddings`, {
@@ -29,6 +30,7 @@ export async function getEmbeddings(text) {
   }
 }
 
+// Takes a prompt string and returns a completion string
 export async function getCompletion(prompt) {
   const payload = {
     model: model,
@@ -62,6 +64,7 @@ export async function getCompletion(prompt) {
   }
 }
 
+// Creates a prompt to classify text as a question or statement and returns 'statement' or 'question'
 export async function classifyText(text) {
   const prompt = `Analyze the following sentence and determine whether it is a question or a statement. 
   The sentence may not have punctuation, so consider its structure and wording. 
@@ -69,12 +72,12 @@ export async function classifyText(text) {
 
   Sentence: ${text}`;
 
-  const response = await getCompletion(prompt);
-  const classification = parseCodeBlock(response.content);
+  const classification = await getCompletion(prompt);
   
-  return classification;
+  return classification.content;
 }
 
+// Takes a statement and returns an object with entity labels as keys and arrays of entity names as values
 export async function getEntities(statement) {
   const prompt = `Identify and extract entities from the following statement.
     Categorize them into these types: Person, Organization, Occupation, Place, Product, Service, Event, Skill, religion, thing.
@@ -97,6 +100,7 @@ export async function getEntities(statement) {
   return entities;
 }
 
+// Takes a statement and an object with entity labels and returns an array of relationship triples (subject, verb, object)
 export async function getRelationships(statement, entities) {
   const prompt = `Identify relationships in the following statement and express them as Subject-Verb-Object triples.
     Use the entities provided below and resolve pronouns to the correct entity where possible.
@@ -114,13 +118,14 @@ export async function getRelationships(statement, entities) {
   return relationships;
 }
 
+// Taks the reponse from the LLM and extracts the last code block as JSON
 export function parseCodeBlock(text) {
-  const start = text.lastIndexOf("```", -3);
+  const end = text.lastIndexOf("```");
+  const start = text.lastIndexOf("```", end - 1);
   let json = null;
 
   if (start !== -1) {
     // Remove the first and last "```"
-    const end = text.lastIndexOf("```");
     let cleanedText = text.substring(start + 3, end);
 
     // Remove any language specifier after the opening "```" if present

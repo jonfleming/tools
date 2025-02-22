@@ -150,6 +150,23 @@ export default function App() {
     return data.content;
   }
 
+  function addContextToConversation(context) {
+    if (context.length > 0) {
+      context.forEach((item) => {
+        // if item.item_id is not in conversationItems, add it
+        const isExistingItem = conversationItems.find((i) => i.item_id === item.item_id);
+        if (item.similarity == 0 || isExistingItem) {
+          return;
+        }
+        item.type = "context";
+        item.content = '   Recalling: ' + item.content;
+        console.log("Adding context item to conversation:", item);
+        // Add context item to conversation
+        setConversationItems((prev) => [...prev, item]);
+      });
+    }
+  }
+
   async function addToConversation(item) {
     if (!item.content.trim()) {
       return;
@@ -183,14 +200,17 @@ export default function App() {
       setUser(item.user);
       setInputItemID(item.item_id);
 
-      // Save to Supabase
-      await fetch("/save-conversation-item", {
+      // Save to conversation item and get back any additional context
+      const response = await fetch("/save-conversation-item", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ item }),
       });
+
+      const { context } = await response.json();
+      addContextToConversation(context);
     } else {
       setContent(item.content);
       setItemID(item.item_id);
