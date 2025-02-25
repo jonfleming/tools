@@ -22,7 +22,7 @@ function transformVerbToRelationshipType(verb) {
   return relationshipType;
 }
 
-function generateCypherMergeStatement(entities, triple) {
+function generateCypherMergeStatement(entities, triple, nodes) {
   const { subject, verb, object } = triple;
   const cypherLines = [];
 
@@ -30,15 +30,23 @@ function generateCypherMergeStatement(entities, triple) {
   const relationshipType = transformVerbToRelationshipType(verb);
 
   // 2. Find subject and object in the entities list
+  const subjectVar = subject.replace(/\s+/g, "_");
+  const objectVar = object.replace(/\s+/g, "_");
   const subjectEntityLabel = getEntityLabel(entities, subject);
   const objectEntityLabel = getEntityLabel(entities, object);
 
   if (subjectEntityLabel && objectEntityLabel) {
-    cypherLines.push(`
-      MERGE (subjectNode:${subjectEntityLabel} {name: '${subject}'})
-      MERGE (objectNode:${objectEntityLabel} {name: '${object}'})
-      MERGE (subjectNode)-[:${relationshipType}]->(objectNode)
-    `);
+    const entity1 = `${subjectVar}:${subjectEntityLabel} {name: '${subject}'}`;
+    const entity2 = `${objectVar}:${objectEntityLabel} {name: '${object}'}`;
+    if (!nodes.has(subjectVar)) {
+      cypherLines.push(`MERGE (${entity1})`);
+      nodes.add(subjectVar);
+    }
+    if (!nodes.has(objectVar)) {
+      cypherLines.push(`MERGE (${entity2})`);
+      nodes.add(objectVar);
+    }
+    cypherLines.push(`MERGE (${subjectVar})-[:${relationshipType}]->(${objectVar})`);
   }
 
   // 3. Construct the Cypher MERGE statement
@@ -52,21 +60,69 @@ function getEntityLabel(entities, entityName) {
 }
 
 function generateCypherStatementsForTriples(entities, triples) {
-  const cypher = triples.map((triple) => generateCypherMergeStatement(entities, triple));
+  const nodes = new Set(); // To keep track of merged nodes
+  const cypher = triples.map((triple) => generateCypherMergeStatement(entities, triple, nodes)).join("\n");
   
   return cypher;
 }
 
-export function updateGraphDB(entities, relationships) {
-  generateCypherStatementsForTriples(entities, relationships).forEach(async (cypherStatement) => {
-    try {
-      console.log("Executing Cypher statement:", cypherStatement);
-      const result = await driver.executeQuery(cypherStatement);
-      console.log("Result:",result);
-    } catch (error) {
-      console.error("Error executing Cypher statement:", error);
-    }
-  });
+function formatRelationship(relationship) {
+  return relationship
+      .toLowerCase()    // Convert to lowercase
+      .replace('_', ' '); // Replace underscore with space
+}
+
+function generateCypherStatementForFacts(entities) { 
+  const flattened = Object.values(entities).flat();
+  const where = flattened.map(name => `subject.name = '${name}'`).join(" or ");
+  const cypherStatement = `
+    MATCH (subject)-[r]-(object)
+    WHERE ${where}
+    RETURN subject.name, type(r), object.name
+  `;
+
+  return cypherStatement;
+}
+
+export async function updateGraphDB(entities, relationships) {
+  const queries = generateCypherStatementsForTriples(entities, relationships);
+  console.log("Generated Cypher statements:", queries);
+  
+  // Execute the Cypher statements
+  try {
+    console.log("Executing Cypher statement:", queries);
+    const result = await driver.executeQuery(queries);
+    console.log("Result:",result);
+  } catch (error) {
+    console.error("Error executing Cypher statement:", error);
+  };
 
   console.log("Graph database updated successfully!");
+}
+
+export async function getFacts(entities) {
+  const facts = [];
+  const query = generateCypherStatementForFacts(entities);
+  let result = { records: [] };
+
+  if (!query)
+    return facts;
+
+  try {
+    console.log("Executing Cypher statement:", query);
+    result = await driver.executeQuery(query);
+    console.log("Result:",result);
+  } catch (error) {
+    console.error("Error executing Cypher statement:", error);
+  }
+
+  result.records.forEach(record => {
+    const subject = record._fields[0];
+    const relationship = formatRelationship(record._fields[1]);
+    const object = record._fields[2];
+    facts.push(`${subject} ${relationship} ${object}`);
+  }); 
+
+  console.log("Facts extracted:", facts);
+  return facts;
 }

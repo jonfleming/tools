@@ -104,7 +104,9 @@ export async function getEntities(statement) {
 export async function getRelationships(statement, entities) {
   const prompt = `Identify relationships in the following statement and express them as Subject-Verb-Object triples.
     Use the entities provided below and resolve pronouns to the correct entity where possible.
-    The Subject and Object in each triple should be chosen from the identified entities.
+    The Subject and Object in each triple should be chosen from the identified entities. The verb should be the action 
+    or relationship between the subject and object formatted as UPPER_CASE_WITH_UNDERSCORES.
+    Return
   
     Statement: "${statement}"
   

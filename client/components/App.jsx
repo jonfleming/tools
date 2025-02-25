@@ -151,7 +151,7 @@ export default function App() {
   }
 
   function addContextToConversation(context) {
-    if (context.length > 0) {
+    if (context?.length > 0) {
       context.forEach((item) => {
         // if item.item_id is not in conversationItems, add it
         const isExistingItem = conversationItems.find((i) => i.item_id === item.item_id);
@@ -159,7 +159,12 @@ export default function App() {
           return;
         }
         item.type = "context";
-        item.content = '   Recalling: ' + item.content;
+        if (item.topic == "facts") {
+          item.content = '   Fact: ' + item.content;  
+        } else {
+          item.content = '   Recalling: ' + item.content;
+        }
+        
         console.log("Adding context item to conversation:", item);
         // Add context item to conversation
         setConversationItems((prev) => [...prev, item]);
@@ -209,8 +214,13 @@ export default function App() {
         body: JSON.stringify({ item }),
       });
 
-      const { context } = await response.json();
-      addContextToConversation(context);
+      const result = await response.json();
+      console.log("Context from server:", result);
+      if (result?.message) {
+        console.log("Message instead of Context:", result.message);
+      } else {
+        addContextToConversation(result.context);
+      }
     } else {
       setContent(item.content);
       setItemID(item.item_id);

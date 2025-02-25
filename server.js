@@ -4,7 +4,7 @@ import { createServer as createViteServer } from "vite";
 import "dotenv/config";
 import { createClient } from "@supabase/supabase-js";
 import { getEmbeddings, getCompletion, getEntities, getRelationships, classifyText } from "./utils/llm.js";
-import { updateGraphDB } from "./utils/graphdb.js";
+import { updateGraphDB, getFacts} from "./utils/graphdb.js";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -155,9 +155,10 @@ app.post("/save-conversation-item", async (req, res) => {
       const classification = await classifyText(item.content);
       console.log("Classified text:", classification);
 
+      const entities = await getEntities(item.content);
+      console.log("Extracted entities:", entities);
+
       if (classification === "statement") {
-        const entities = await getEntities(item.content);
-        console.log("Extracted entities:", entities);
 
         // Make sure entities has at least one entity
         // entities is an object with keys that are entity types and values that are arrays of entity names
@@ -167,7 +168,10 @@ app.post("/save-conversation-item", async (req, res) => {
     
           updateGraphDB(entities, relationships);   
         }
-      }
+      } else {
+      // Question
+      // Query Graph DB for related information
+      const facts = await getFacts(entities);
 
       const { data: contextData, error: contextError } = await supabase
         .rpc("match_conversation_items", {
@@ -184,16 +188,34 @@ app.post("/save-conversation-item", async (req, res) => {
         role: item.role,
         item_id: item.item_id,
         input_item_id: item.input_item_id,
-        type: item.type,
+        type: 'context',
         user: item.user,
         session: item.session,
         topic: item.topic,
         similarity: item.similarity
       }));
 
-      // Return the context along with the saved item
+      if (facts.length > 0) {
+        facts.forEach(fact => {
+          const factItem = {
+            content: fact, 
+            role: "assistant", 
+            item_id: crypto.randomUUID(),
+            type: "context",
+            user: "neo4j",
+            session: crypto.randomUUID(),
+            topic: "facts",
+            similarity: 0.5
+          }
+
+        context.push(factItem);
+        });
+      }
+
+      // Return context for the given question
       return res.json({ context });
     }
+  }
 
     // Use vector search to find similar items for context
     res.status(200).json({ message: "Conversation item saved successfully" });
