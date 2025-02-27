@@ -47,7 +47,7 @@ function SessionActive({ stopSession, sendTextMessage }) {
         value={message}
         onChange={(e) => setMessage(e.target.value)}
       />
-      <Button
+      <Button id="send-text-message"
         onClick={() => {
           if (message.trim()) {
             handleSendClientEvent();

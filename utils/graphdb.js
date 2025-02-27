@@ -85,13 +85,17 @@ function generateCypherStatementForFacts(entities) {
 }
 
 export async function updateGraphDB(entities, relationships) {
-  const queries = generateCypherStatementsForTriples(entities, relationships);
-  console.log("Generated Cypher statements:", queries);
+  const query = generateCypherStatementsForTriples(entities, relationships);
+  console.log("Generated Cypher statements:", query);
   
+  if (!query) {
+    console.log("No Cypher statements generated.");
+    return;
+  }
   // Execute the Cypher statements
   try {
-    console.log("Executing Cypher statement:", queries);
-    const result = await driver.executeQuery(queries);
+    console.log("Executing Cypher statement:", query);
+    const result = await driver.executeQuery(query);
     console.log("Result:",result);
   } catch (error) {
     console.error("Error executing Cypher statement:", error);

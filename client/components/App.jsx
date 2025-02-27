@@ -174,6 +174,7 @@ export default function App() {
 
   async function addToConversation(item) {
     if (!item.content.trim()) {
+      console.log("Empty content, not adding to conversation");
       return;
     }
 
@@ -222,11 +223,13 @@ export default function App() {
         addContextToConversation(result.context);
       }
     } else {
+      console.log("Adding assistant item to conversation:", item);
       setContent(item.content);
       setItemID(item.item_id);
       setRole(item.role);
       setItemType(item.type);
 
+      console.log("Setting responseReady to true");
       setResponseReady(true);
     }
   }    
