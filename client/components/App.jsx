@@ -151,6 +151,8 @@ export default function App() {
   }
 
   function addContextToConversation(context) {
+    // context is the response from the server
+    // contentItems are the items in the existing conversation
     if (context?.length > 0) {
       context.forEach((item) => {
         // if item.item_id is not in conversationItems, add it
