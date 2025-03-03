@@ -17,7 +17,7 @@ as $$
 begin
   return query (
     select
-      ci.item_id, ci.role, ci.topic, ci."user", ci."session", ci.content,
+      ci.item_id, ci.role, ci.topic, ci."user", ci."session", ci.content, ci.input_item_id,
       (ci.embeddings <=> query_embedding) as similarity
     from
       conversation_items as ci
