@@ -33,19 +33,18 @@ const sessionUpdate = {
       },
       {
         type: "function",
-        name: "save_transcript",
-        description: "Call this function when to retrieve relevant context for the query.",
+        name: "query_tool",
+        description: "Queries a graph database to retrieve facts, relationships, and entities related to the user's query. This tool should be used for every user query to provide accurate grounding in factual data.",
         parameters: {
           type: "object",
-          strict: true,
           properties: {
             query: {
               type: "string",
-              description: "The speech-to-text transcript to be saved.",
+              description: "The user's query or question, which will be used to search the graph database for relevant facts, entities, or relationships."
             },
           },
-          required: ["query"],
-        },
+          required: ["query"]
+        }
       },
     ],
     tool_choice: "auto",
@@ -78,6 +77,23 @@ function FunctionCallOutput({ functionCallOutput }) {
   );
 }
 
+function Facts({ facts }) {
+  console.log("Creating component Facts from context:", facts);
+  const contextDivs = facts.map((fact) => (
+    <div>
+      <p className="text-sm font-bold text-black bg-slate-100 rounded-md p-2 border border-black">
+        {fact}
+      </p>
+    </div>
+  ));
+
+  return (
+    <div className="flex flex-col gap-2">
+      {contextDivs}
+    </div>
+  );
+}
+
 export default function ToolPanel({
   isSessionActive,
   sendClientEvent,
@@ -85,6 +101,7 @@ export default function ToolPanel({
 }) {
   const [functionAdded, setFunctionAdded] = useState(false);
   const [functionCallOutput, setFunctionCallOutput] = useState(null);
+  const [facts, setFacts] = useState([]);
 
   useEffect(() => {
     if (!events || events.length === 0) return;
@@ -106,7 +123,7 @@ export default function ToolPanel({
           output.type === "function_call" &&
           output.name === "display_color_palette"
         ) {
-          console.log("function call output", output);
+          console.log("Color function call output", output);
           setFunctionCallOutput(output);
           setTimeout(() => {
             sendClientEvent({
@@ -119,6 +136,15 @@ export default function ToolPanel({
               },
             });
           }, 500);
+        } else if (
+          output.type === "function_call" &&
+          output.name === "query_tool"
+        ) {
+          console.log("Query function call output", output);
+          const { query } = JSON.parse(output.arguments);
+          // Make server request for facts from graph database
+          // For now, just display the passed prompt
+          setFacts([...facts, query]);
         }
       });
     }
@@ -144,7 +170,19 @@ export default function ToolPanel({
         ) : (
           <p>Start the session to use this tool...</p>
         )}
-      </div>
+      </div>   
+      <div className="h-full bg-gray-50 rounded-md p-4">
+        <h2 className="text-lg font-bold">Facts</h2>
+        {isSessionActive ? (
+          facts.length > 0 ? (
+            <Facts facts={facts} />
+          ) : (
+            <p>Facts...</p>
+          )
+        ) : (
+          <p>Start the session to use this tool...</p>
+        )}
+      </div> 
     </section>
   );
 }

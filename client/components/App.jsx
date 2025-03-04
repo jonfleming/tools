@@ -28,6 +28,7 @@ export default function App() {
   const [user, setUser] = useState(null);
 
   async function startSession() {
+    console.log("Starting App session...");
     // Get an ephemeral key from the Fastify server
     const tokenResponse = await fetch("/token");
     const data = await tokenResponse.json();
@@ -73,6 +74,7 @@ export default function App() {
     await pc.setRemoteDescription(answer);
 
     peerConnection.current = pc;
+    console.log("App session started with peer connection:", pc);
   }
 
   // Stop current session, clean up peer connection and data channel

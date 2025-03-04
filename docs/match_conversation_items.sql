@@ -1,7 +1,7 @@
 create or replace function match_conversation_items(
   match_count int,
   match_threshold float,
-  query_embedding vector(1536)
+  query_embeddings vector(1536)
 
 )
 returns table (
@@ -11,6 +11,7 @@ returns table (
   "user" text,
   "session" text,
   content text,
+  input_item_id text,
   similarity float
 )
 as $$
@@ -18,10 +19,10 @@ begin
   return query (
     select
       ci.item_id, ci.role, ci.topic, ci."user", ci."session", ci.content, ci.input_item_id,
-      (ci.embeddings <=> query_embedding) as similarity
+      (ci.embeddings <=> query_embeddings) as similarity
     from
       conversation_items as ci
-    where ci.embeddings <=> query_embedding < 1 - match_threshold
+    where ci.embeddings <=> query_embeddings < 1 - match_threshold
     order by
       similarity desc
     limit match_count
