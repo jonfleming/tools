@@ -11,6 +11,8 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 const apiKey = process.env.OPENAI_API_KEY;
 const realtimeApiUrl = "https://api.openai.com/v1/realtime/sessions";
+const classification = ["Question", "Statement", "Answer", "cComment"]; // from public.classification table
+const userConversationCache = new Map(); // Maps user_item_id to user conversation item
 
 const app = express();
 app.use(express.json());
@@ -122,57 +124,78 @@ app.post("/auth", async (req, res) => {
   }
 });
 
+async function saveConversationItem(item) {
+  let classification = "";
+  const embeddings = await getEmbeddings(item.content);
+
+  if (item.role === "user") {
+    userConversationCache.set(item.item_id, item);
+    classification = await classifyText(item);
+  } else {
+    if (item.input_item_id) {
+      const userItem = userConversationCache.get(item.input_item_id);
+      classification = userItem?.classification == "Question" ? "Answer" : "Comment";
+      userConversationCache.delete(item.input_item_id);
+    }  
+  }
+  console.log("Classified text:", classification);
+
+  const conversationItem = { 
+    content: item.content,
+    role: item.role,
+    topic: item.topic,
+    user: item.user,
+    type: item.type,
+    input_item_id: item.input_item_id,
+    session: item.session,
+    item_id: item.item_id,
+    embeddings: embeddings,
+    classification_id: classification.indexOf(classification) + 1
+  }
+  console.log("Conversation item:", conversationItem);
+
+  const { data, error } = await supabase
+    .from("conversation_items")
+    .insert([conversationItem]);
+
+  return { data, error };
+}
+
 // Modify the save-conversation-item handler to include embeddings
 app.post("/save-conversation-item", async (req, res) => {
+  let response;
   const { item } = req.body;
+  console.log("Save conversation item:", item);
 
   if (!item.content || (item.role ==="assistant" && !item.input_item_id)) {
     return res.status(200).json({ data: "Content and item ID are required for conversation items" });
   }
 
   try {
-    // Get embeddings for the content
-    const embeddings = await getEmbeddings(item.content);
-    const { data, error } = await supabase
-      .from("conversation_items")
-      .insert([{ 
-        content: item.content,
-        role: item.role,
-        item_id: item.item_id,
-        input_item_id: item.input_item_id,
-        type: item.type,
-        user: item.user,
-        session: item.session,
-        topic: item.topic,
-        embeddings: embeddings // Add embeddings to the database record
-      }]);
 
-    if (error) {
-      return res.status(400).json({ error: error.message });
-    }
-    
     if (item.role === "user") {
-      const classification = await classifyText(item.content);
-      console.log("Classified text:", classification);
-
-      const entities = await getEntities(item.content);
-      console.log("Extracted entities:", entities);
-
-      if (classification === "statement") {
-
-        // Make sure entities has at least one entity
+      response = await saveConversationItem(item);
+      if (response.error) {
+        console.log("Error saving conversation item:", response.error);
+        return res.status(400).json({ error: error.message });
+      }
+    
+    
+      if (item.classification === "Statement") {
         // entities is an object with keys that are entity types and values that are arrays of entity names
+        const entities = await getEntities(item.content);
+        console.log("Extracted entities:", entities);
+  
         if (Object.keys(entities).length > 0) {
           const relationships = await getRelationships(item.content, entities);
           console.log("Extracted relationships:", relationships);
     
-          updateGraphDB(entities, relationships);   
+          response = updateGraphDB(entities, relationships);
+          return res.status(response.code).json(response);
         }
       } else {
       // Question
-      // Query Graph DB for related information
-      const facts = await getFacts(entities);
-
+      const embeddings = await getEmbeddings(item.content);
       const { data: contextData, error: contextError } = await supabase
         .rpc("match_conversation_items", {
           match_count: 3,
@@ -184,33 +207,17 @@ app.post("/save-conversation-item", async (req, res) => {
       }
 
       const context = contextData.map(item => ({
-        content: item.content,
-        role: item.role,
         item_id: item.item_id,
-        input_item_id: item.input_item_id,
-        type: 'context',
-        user: item.user,
-        session: item.session,
+        role: item.role,
         topic: item.topic,
+        user: item.user,
+        type: 'context',
+        session: item.session,
+        content: item.content,
+        input_item_id: item.input_item_id,
+        classification: item.classification,
         similarity: item.similarity
       }));
-
-      if (facts.length > 0) {
-        facts.forEach(fact => {
-          const factItem = {
-            content: fact, 
-            role: "assistant", 
-            item_id: crypto.randomUUID(),
-            type: "context",
-            user: "neo4j",
-            session: crypto.randomUUID(),
-            topic: "facts",
-            similarity: 0.5
-          }
-
-        context.push(factItem);
-        });
-      }
 
       // Return context for the given question
       return res.json({ context });
@@ -260,6 +267,22 @@ app.post("/topic", async (req, res) => {
   }
   
   return res.json({ content });    
+});
+
+app.post("/get-facts", async (req, res) => {
+  const { query } = req.body;
+
+  if (!query) {
+    return res.status(400).json({ error: "Query parameter is required." });
+  }
+
+  try {
+    const facts = await getFacts(query); // Assuming getFacts is your function to fetch facts
+    res.json({ facts });
+  } catch (error) {
+    console.error("Error fetching facts:", error);
+    res.status(500).json({ error: "Failed to fetch facts." });
+  }
 });
 
 // Render the React client

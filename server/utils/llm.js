@@ -65,16 +65,16 @@ export async function getCompletion(prompt) {
 }
 
 // Creates a prompt to classify text as a question or statement and returns 'statement' or 'question'
-export async function classifyText(text) {
+export async function classifyText(item) {
   const prompt = `Analyze the following sentence and determine whether it is a question or a statement. 
   The sentence may not have punctuation, so consider its structure and wording. 
-  Respond with only 'question' or 'statement' and nothing else.
+  Respond with only 'Question' or 'Statement' and nothing else.
 
-  Sentence: ${text}`;
+  Sentence: ${item.content}`;
 
-  const classification = await getCompletion(prompt);
+  const response = await getCompletion(prompt);
   
-  return classification.content;
+  return response.content;
 }
 
 // Takes a statement and returns an object with entity labels as keys and arrays of entity names as values

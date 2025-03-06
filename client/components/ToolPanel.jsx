@@ -79,8 +79,11 @@ function FunctionCallOutput({ functionCallOutput }) {
 
 function Facts({ facts }) {
   console.log("Creating component Facts from context:", facts);
-  const contextDivs = facts.map((fact) => (
-    <div>
+  const contextDivs = facts.map((fact, index) => (
+    <div
+      key={index}
+      className="w-full h-16 rounded-md flex items-center justify-center border border-gray-200"
+    >
       <p className="text-sm font-bold text-black bg-slate-100 rounded-md p-2 border border-black">
         {fact}
       </p>
@@ -142,9 +145,28 @@ export default function ToolPanel({
         ) {
           console.log("Query function call output", output);
           const { query } = JSON.parse(output.arguments);
-          // Make server request for facts from graph database
-          // For now, just display the passed prompt
-          setFacts([...facts, query]);
+
+          fetch('get-facts', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ query })
+          })
+          .then(response => response.json())
+          .then(data => {
+            if (data.facts) {
+              setFacts((prevFacts) => [...prevFacts, ...data.facts]); // Update with fetched facts
+              // Add facts to conversation with a response.create event
+            } else if (data.error) {
+              console.error("Error fetching facts:", data.error);
+              // Handle error appropriately, e.g., display an error message
+            }
+          })
+          .catch(error => {
+            console.error("Error fetching facts:", error);
+            // Handle network errors
+          });
         }
       });
     }

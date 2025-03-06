@@ -99,9 +99,11 @@ export async function updateGraphDB(entities, relationships) {
     console.log("Result:",result);
   } catch (error) {
     console.error("Error executing Cypher statement:", error);
+    return ({ code: 500, message: "Error updating graph database" });
   };
 
   console.log("Graph database updated successfully!");
+  return ({ code: 200, message: "Graph database updated successfully" });
 }
 
 export async function getFacts(entities) {
