@@ -270,6 +270,7 @@ app.post("/topic", async (req, res) => {
 });
 
 app.post("/get-facts", async (req, res) => {
+  console.log("Get facts request:", req.body);
   const { query } = req.body;
 
   if (!query) {
@@ -277,7 +278,8 @@ app.post("/get-facts", async (req, res) => {
   }
 
   try {
-    const facts = await getFacts(query); // Assuming getFacts is your function to fetch facts
+    const entities = await getEntities(query);
+    const facts = await getFacts(entities); // Assuming getFacts is your function to fetch facts
     res.json({ facts });
   } catch (error) {
     console.error("Error fetching facts:", error);

@@ -82,7 +82,7 @@ function Facts({ facts }) {
   const contextDivs = facts.map((fact, index) => (
     <div
       key={index}
-      className="w-full h-16 rounded-md flex items-center justify-center border border-gray-200"
+      className="w-full h-16 rounded-md flex items-center justify-left border border-gray-200"
     >
       <p className="text-sm font-bold text-black bg-slate-100 rounded-md p-2 border border-black">
         {fact}
@@ -156,11 +156,22 @@ export default function ToolPanel({
           .then(response => response.json())
           .then(data => {
             if (data.facts) {
-              setFacts((prevFacts) => [...prevFacts, ...data.facts]); // Update with fetched facts
-              // Add facts to conversation with a response.create event
+              setFacts((prevFacts) => [...prevFacts, ...data.facts]);
+              console.log("Facts:", data.facts);
+              sendClientEvent({
+                type: "response.create",
+                response: {
+                  instructions: `
+                  Use the following facts to answer the user's query.
+                  Don't repeat the facts, just use them to answer the query.
+                  If the user asks for more facts, use the query tool to get more facts.
+                  Facts: ${data.facts.join(", ")}
+                `,
+                },
+              });
+                
             } else if (data.error) {
               console.error("Error fetching facts:", data.error);
-              // Handle error appropriately, e.g., display an error message
             }
           })
           .catch(error => {

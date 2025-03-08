@@ -74,7 +74,7 @@ function formatRelationship(relationship) {
 
 function generateCypherStatementForFacts(entities) { 
   const flattened = Object.values(entities).flat();
-  const where = flattened.map(name => `subject.name = '${name}'`).join(" or ");
+  const where = flattened.map(name => `apoc.text.phonetic(subject.name) = apoc.text.phonetic('${name}')`).join(" or ");
   const cypherStatement = `
     MATCH (subject)-[r]-(object)
     WHERE ${where}
