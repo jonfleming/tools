@@ -1,6 +1,7 @@
 const apiKey = process.env.OPENAI_API_KEY;
 const model = "gpt-4o-mini";
 const openAiUrl = "https://api.openai.com/v1";
+export const sentenceClassification = ["SELECT", "Question", "Statement", "Answer", "Comment"]; // from public.classification table
 
 // Takes a string and returns a vector (Array[1536])
 export async function getEmbeddings(text) {
@@ -72,9 +73,9 @@ export async function classifyText(item) {
 
   Sentence: ${item.content}`;
 
-  const response = await getCompletion(prompt);
-  
-  return response.content;
+  const { content } = await getCompletion(prompt);
+
+  return sentenceClassification.indexOf(content);
 }
 
 // Takes a statement and returns an object with entity labels as keys and arrays of entity names as values

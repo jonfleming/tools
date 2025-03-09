@@ -26,6 +26,8 @@ export default function App() {
   const [session, setSession] = useState(null);
   const [topic, setTopic] = useState("");
   const [user, setUser] = useState(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const loadingAudioRef = useRef(null);
 
   async function startSession() {
     console.log("Starting App session...");
@@ -133,9 +135,9 @@ export default function App() {
       item_id: crypto.randomUUID(),
       type: "input_text",
       role: "user",
-      timestamp: new Date().toLocaleTimeString(),
       content: message,
     });
+        
     sendClientEvent({ type: "response.create" });
   }
 
@@ -210,6 +212,13 @@ export default function App() {
       setUser(item.user);
       setInputItemID(item.item_id);
 
+      // Start loading animation and sound
+      setIsProcessing(true);
+      if (loadingAudioRef.current) {
+        loadingAudioRef.current.play();
+      }
+
+
       // Save to conversation item and get back any additional context
       const response = await fetch("/save-conversation-item", {
         method: "POST",
@@ -248,25 +257,39 @@ export default function App() {
         setEvents((prev) => [data, ...prev]);
 
         switch (data.type) {
+          case "response.create":
+            // Stop loading animation and sound
+            setIsProcessing(false);
+            if (loadingAudioRef.current) {
+              loadingAudioRef.current.pause();
+              loadingAudioRef.current.currentTime = 0;
+            }
+            break;
           case "conversation.item.input_audio_transcription.completed":
             console.log("User transcript: ",e, data.transcript)
             addToConversation({
               item_id: crypto.randomUUID(),
               type: "input_text",
               role: "user",
-              timestamp: new Date().toLocaleTimeString(),
               content: data.transcript,
             });
             break;
           case "response.audio_transcript.done":
-            console.log("Assistant transcript: ", e, data.transcript)
+            console.log("Assistant transcript: ", e, data.transcript)            
             addToConversation({
               item_id: crypto.randomUUID(),
               type: "input_text",
               role: "assistant",
-              timestamp: new Date().toLocaleTimeString(),
               content: data.transcript,
             });
+            break;
+          case "response.created":
+            // Response started, keep animation going
+            setIsProcessing(false);
+            if (loadingAudioRef.current) {
+              loadingAudioRef.current.pause();
+              loadingAudioRef.current.currentTime = 0;
+            }
             break;
           default:
             break;
@@ -319,6 +342,19 @@ export default function App() {
   useEffect(() => {
     console.log("messages", conversationItems);
   }, [conversationItems]);  
+
+  // Initialize the loading audio on component mount
+  useEffect(() => {
+    loadingAudioRef.current = new Audio('/public/assets/processing.mp3');
+    loadingAudioRef.current.loop = true;
+    
+    return () => {
+      if (loadingAudioRef.current) {
+        loadingAudioRef.current.pause();
+        loadingAudioRef.current = null;
+      }
+    };
+  }, []);
 
   return (
     <>
@@ -398,6 +434,15 @@ export default function App() {
                 isSessionActive={isSessionActive}
               />
             </section>
+            {/* Processing animation */}
+            {isProcessing && (
+              <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-30 z-50">
+                <div className="bg-white p-4 rounded-lg shadow-lg flex flex-col items-center">
+                  <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500 mb-2"></div>
+                  <p className="text-lg font-semibold">Thinking...</p>
+                </div>
+              </div>
+            )}
           </>
         ) : null}
       </main>

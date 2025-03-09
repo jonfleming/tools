@@ -1,9 +1,14 @@
+const originalLog = console.log;
+console.log = function(...args) {
+    originalLog.apply(console, [`[${new Date().toISOString()}]`, ...args]);
+};
+
 import express from "express";
 import fs from "fs";
 import { createServer as createViteServer } from "vite";
 import "dotenv/config";
 import { createClient } from "@supabase/supabase-js";
-import { getEmbeddings, getCompletion, getEntities, getRelationships, classifyText } from "./utils/llm.js";
+import { getEmbeddings, getCompletion, getEntities, getRelationships, classifyText, sentenceClassification } from "./utils/llm.js";
 import { updateGraphDB, getFacts} from "./utils/graphdb.js";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -11,7 +16,6 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 const apiKey = process.env.OPENAI_API_KEY;
 const realtimeApiUrl = "https://api.openai.com/v1/realtime/sessions";
-const classification = ["Question", "Statement", "Answer", "cComment"]; // from public.classification table
 const userConversationCache = new Map(); // Maps user_item_id to user conversation item
 
 const app = express();
@@ -125,40 +129,25 @@ app.post("/auth", async (req, res) => {
 });
 
 async function saveConversationItem(item) {
-  let classification = "";
-  const embeddings = await getEmbeddings(item.content);
+  item.embeddings = await getEmbeddings(item.content);
 
   if (item.role === "user") {
+    item.classification_id = await classifyText(item);
     userConversationCache.set(item.item_id, item);
-    classification = await classifyText(item);
   } else {
     if (item.input_item_id) {
       const userItem = userConversationCache.get(item.input_item_id);
-      classification = userItem?.classification == "Question" ? "Answer" : "Comment";
+      item.classification_id = userItem?.classification_id + 2;
       userConversationCache.delete(item.input_item_id);
     }  
   }
-  console.log("Classified text:", classification);
 
-  const conversationItem = { 
-    content: item.content,
-    role: item.role,
-    topic: item.topic,
-    user: item.user,
-    type: item.type,
-    input_item_id: item.input_item_id,
-    session: item.session,
-    item_id: item.item_id,
-    embeddings: embeddings,
-    classification_id: classification.indexOf(classification) + 1
-  }
-  console.log("Conversation item:", conversationItem);
-
+  console.log("Conversation item:", item);
   const { data, error } = await supabase
     .from("conversation_items")
-    .insert([conversationItem]);
+    .insert([item]);
 
-  return { data, error };
+  return { classification: sentenceClassification[item.classification_id], data, error };
 }
 
 // Modify the save-conversation-item handler to include embeddings
@@ -172,16 +161,14 @@ app.post("/save-conversation-item", async (req, res) => {
   }
 
   try {
+    const {classification, error} = await saveConversationItem(item);
+    if (error) {
+      console.log("Error in saveConversationItem response:", item, error);
+      return res.status(400).json({ error });
+    }
 
-    if (item.role === "user") {
-      response = await saveConversationItem(item);
-      if (response.error) {
-        console.log("Error saving conversation item:", response.error);
-        return res.status(400).json({ error: error.message });
-      }
-    
-    
-      if (item.classification === "Statement") {
+    if (item.role === "user") {  
+      if (classification === "Statement") {
         // entities is an object with keys that are entity types and values that are arrays of entity names
         const entities = await getEntities(item.content);
         console.log("Extracted entities:", entities);
@@ -227,7 +214,7 @@ app.post("/save-conversation-item", async (req, res) => {
     // Use vector search to find similar items for context
     res.status(200).json({ message: "Conversation item saved successfully" });
   } catch (error) {
-    console.error("Error saving conversation item:", error);
+    console.error("Error saving conversation item:", item, error);
     res.status(500).json({ error: "Failed to save conversation item" });
   }
 });

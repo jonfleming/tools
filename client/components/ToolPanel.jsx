@@ -80,14 +80,9 @@ function FunctionCallOutput({ functionCallOutput }) {
 function Facts({ facts }) {
   console.log("Creating component Facts from context:", facts);
   const contextDivs = facts.map((fact, index) => (
-    <div
-      key={index}
-      className="w-full h-16 rounded-md flex items-center justify-left border border-gray-200"
-    >
-      <p className="text-sm font-bold text-black bg-slate-100 rounded-md p-2 border border-black">
-        {fact}
-      </p>
-    </div>
+    <p key={index} className="text-sm font-bold text-black bg-slate-100 rounded-md p-2 border border-black">
+      {fact}
+    </p>
   ));
 
   return (
@@ -156,7 +151,10 @@ export default function ToolPanel({
           .then(response => response.json())
           .then(data => {
             if (data.facts) {
-              setFacts((prevFacts) => [...prevFacts, ...data.facts]);
+              const newFacts = facts.concat(data.facts);
+              const uniqueFacts = Array.from(new Set(newFacts));
+              setFacts(uniqueFacts);
+          
               console.log("Facts:", data.facts);
               sendClientEvent({
                 type: "response.create",
