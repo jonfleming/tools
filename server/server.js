@@ -1,6 +1,6 @@
 const originalLog = console.log;
 console.log = function(...args) {
-    originalLog.apply(console, [`[${new Date().toISOString()}]`, ...args]);
+    originalLog.apply(console, [`[${new Date().toISOString()}]`, ...args]);    
 };
 
 import express from "express";
@@ -58,8 +58,14 @@ app.get("/token", async (req, res) => {
 });
 
 app.post("/signup", async (req, res) => {
-  const { email, password } = req.body;
-  const { user, error } = await supabase.auth.signUp({ email, password });
+  const { email, password, fullname } = req.body;
+  const { user, error } = await supabase.auth.signUp({ 
+    email, 
+    password,
+    options: {
+      data: { fullname },
+    },
+  });
   if (error) {
     return res.status(400).json({ error: error.message });
   }
@@ -170,7 +176,7 @@ app.post("/save-conversation-item", async (req, res) => {
     if (item.role === "user") {  
       if (classification === "Statement") {
         // entities is an object with keys that are entity types and values that are arrays of entity names
-        const entities = await getEntities(item.content);
+        const entities = await getEntities(item.content, item.user);
         console.log("Extracted entities:", entities);
   
         if (Object.keys(entities).length > 0) {
@@ -220,13 +226,13 @@ app.post("/save-conversation-item", async (req, res) => {
 });
 
 app.post("/extract-entity", async (req, res) => {  
-  const { statement } = req.body;
+  const { statement, user } = req.body;
   
   if (!text) {
     return res.status(400).json({ error: "Text is required for completions" });
   }
   
-  const { content, error } = await getEntities(statement);
+  const { content, error } = await getEntities(statement, user);
   
   if (error) {
     return res.status(400).json({ error });
@@ -258,14 +264,14 @@ app.post("/topic", async (req, res) => {
 
 app.post("/get-facts", async (req, res) => {
   console.log("Get facts request:", req.body);
-  const { query } = req.body;
+  const { query, user } = req.body;
 
   if (!query) {
     return res.status(400).json({ error: "Query parameter is required." });
   }
 
   try {
-    const entities = await getEntities(query);
+    const entities = await getEntities(query, user);
     const facts = await getFacts(entities); // Assuming getFacts is your function to fetch facts
     res.json({ facts });
   } catch (error) {

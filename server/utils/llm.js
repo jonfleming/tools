@@ -79,8 +79,9 @@ export async function classifyText(item) {
 }
 
 // Takes a statement and returns an object with entity labels as keys and arrays of entity names as values
-export async function getEntities(statement) {
+export async function getEntities(statement, user) {
   const prompt = `Identify and extract entities from the following statement.
+     The statement may contain self-references (like "I", "I'm", etc.) which should be treated as referring to a person named "${user}".
     Categorize them into these types: Person, Organization, Occupation, Place, Product, Service, Event, Skill, religion, thing.
     Return the result as a JSON object where keys are entity types and values are arrays of entity names.
   

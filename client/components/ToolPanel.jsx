@@ -42,6 +42,10 @@ const sessionUpdate = {
               type: "string",
               description: "The user's query or question, which will be used to search the graph database for relevant facts, entities, or relationships."
             },
+            user: {
+              type: "string",
+              description: "The user's name as supplied in the instructions."
+            }
           },
           required: ["query"]
         }
@@ -139,14 +143,14 @@ export default function ToolPanel({
           output.name === "query_tool"
         ) {
           console.log("Query function call output", output);
-          const { query } = JSON.parse(output.arguments);
+          const { query, user } = JSON.parse(output.arguments);
 
-          fetch('get-facts', {
+          fetch('/get-facts', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ query })
+            body: JSON.stringify({ query, user })
           })
           .then(response => response.json())
           .then(data => {
