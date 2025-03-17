@@ -8,15 +8,17 @@ import fs from "fs";
 import { createServer as createViteServer } from "vite";
 import "dotenv/config";
 import { createClient } from "@supabase/supabase-js";
+import jwt from "jsonwebtoken"; // Add this for token verification
 import { getEmbeddings, getCompletion, getEntities, getRelationships, classifyText, sentenceClassification } from "./utils/llm.js";
 import { updateGraphDB, getFacts} from "./utils/graphdb.js";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const supabaseUrl = process.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY;
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 const apiKey = process.env.OPENAI_API_KEY;
 const realtimeApiUrl = "https://api.openai.com/v1/realtime/sessions";
 const userConversationCache = new Map(); // Maps user_item_id to user conversation item
+const supabaseAdmin = createClient(supabaseUrl, supabaseAnonKey);
 
 const app = express();
 app.use(express.json());
@@ -31,9 +33,27 @@ const vite = await createViteServer({
 });
 app.use(vite.middlewares);
 
+// // Middleware to verify Supabase JWT tokens
+// app.use(async (req, res, next) => {
+//   const token = req.headers.authorization?.split(" ")[1];
+//   if (!token) {
+//     return res.status(401).json({ error: "Unauthorized" });
+//   }
+
+//   try {
+//     const { sub: userId } = jwt.decode(token); // Decode the token to get the user ID
+//     req.user = { id: userId }; // Attach user info to the request object
+//     next();
+//   } catch (error) {
+//     console.error("JWT verification error:", error);
+//     res.status(401).json({ error: "Invalid token" });
+//   }
+// });
+
 // API route for token generation
 app.get("/token", async (req, res) => {
   try {
+    const { instructions } = req.query;
     const response = await fetch(
       realtimeApiUrl,
       {
@@ -45,6 +65,7 @@ app.get("/token", async (req, res) => {
         body: JSON.stringify({
           model: "gpt-4o-realtime-preview-2024-12-17",
           voice: "sage",
+          instructions: instructions || "You are a helpful assistant.",
         }),
       },
     );
@@ -55,38 +76,6 @@ app.get("/token", async (req, res) => {
     console.error("Token generation error:", error);
     res.status(500).json({ error: "Failed to generate token" });
   }
-});
-
-app.post("/signup", async (req, res) => {
-  const { email, password, fullname } = req.body;
-  const { user, error } = await supabase.auth.signUp({ 
-    email, 
-    password,
-    options: {
-      data: { fullname },
-    },
-  });
-  if (error) {
-    return res.status(400).json({ error: error.message });
-  }
-  res.json({ user });
-});
-
-app.post("/signin", async (req, res) => {
-  const { email, password } = req.body;
-  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-  if (error) {
-    return res.status(400).json({ error: error.message });
-  }
-  res.json(data);
-});
-
-app.post("/signout", async (req, res) => {
-  const { error } = await supabase.auth.signOut();
-  if (error) {
-    return res.status(400).json({ error: error.message });
-  }
-  res.json({ message: "User signed out" });
 });
 
 // Add this with your other auth endpoints
@@ -225,6 +214,7 @@ app.post("/save-conversation-item", async (req, res) => {
   }
 });
 
+// This is not being used right now.  Entities are extracted by /save-conversation-item
 app.post("/extract-entity", async (req, res) => {  
   const { statement, user } = req.body;
   
@@ -278,6 +268,24 @@ app.post("/get-facts", async (req, res) => {
     console.error("Error fetching facts:", error);
     res.status(500).json({ error: "Failed to fetch facts." });
   }
+});
+
+// Example: Protect a route
+app.get("/protected-data", async (req, res) => {
+  if (!req.user) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from("protected_table")
+    .select("*")
+    .eq("user_id", req.user.id);
+
+  if (error) {
+    return res.status(500).json({ error: error.message });
+  }
+
+  res.json(data);
 });
 
 // Render the React client

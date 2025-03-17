@@ -5,6 +5,7 @@ import Conversation from "./Conversation";
 import SessionControls from "./SessionControls";
 import ToolPanel from "./ToolPanel";
 import AuthDialog from "./AuthDialog";
+import { getSupabaseClient } from "../lib/supabaseClient";
 
 export default function App() {
   const [showConversation, setShowConversation] = useState(true);
@@ -28,11 +29,17 @@ export default function App() {
   const [user, setUser] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const loadingAudioRef = useRef(null);
-
+  const supabaseUrl  = import.meta.env.VITE_SUPABASE_URL;
+  const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+  const supabase = getSupabaseClient(supabaseUrl, supabaseAnonKey);
+  
   async function startSession() {
     console.log("Starting App session...");
+    const instructions = `You are a helpful assistant named Amy.  The user's name is ${user}. 
+    Use the supplied information to answer the user's questions.`;
+    
     // Get an ephemeral key from the Fastify server
-    const tokenResponse = await fetch("/token");
+    const tokenResponse = await fetch(`/token?instructions=${instructions}`);
     const data = await tokenResponse.json();
     const EPHEMERAL_KEY = data.client_secret.value;
 
@@ -147,7 +154,7 @@ export default function App() {
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ text }) // Ensuring the body is properly formatted as JSON
+      body: JSON.stringify({ text }) 
     });
     
     const data = await response.json();
@@ -246,6 +253,13 @@ export default function App() {
       setResponseReady(true);
     }
   }    
+
+  function handleAuthLogin(user, fullname) {
+    setShowAuth(false);
+    setIsAuthenticated(true);
+    setUser(fullname);
+    setSession(crypto.randomUUID());
+  }
 
   // Attach event listeners to the data channel when a new one is created
   useEffect(() => {
@@ -366,16 +380,9 @@ export default function App() {
         {isAuthenticated && (
           <button
             onClick={async () => {
-              const response = await fetch("/signout", {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                },
-              });
-              if (response.ok) {
-                setIsAuthenticated(false);
-                setShowAuth(true);
-              }
+              await supabase.auth.signOut();
+              setIsAuthenticated(false);
+              setShowAuth(true);
             }}
             className="mr-4 px-4 py-2 bg-red-500 text-white rounded"
           >
@@ -386,12 +393,9 @@ export default function App() {
       <main className="absolute top-16 left-0 right-0 bottom-0 flex flex-col justify-between" style={{ paddingRight: "380px" }}>
         {showAuth && !isAuthenticated && (
           <AuthDialog
-            onClose={(user) => {
-              setShowAuth(false);
-              setIsAuthenticated(true);
-              setUser(user);
-              setSession(crypto.randomUUID());
-            }}
+            onClose={handleAuthLogin}
+            supabaseUrl={supabaseUrl }
+            supabaseAnonKey={supabaseAnonKey}  
           />
         )}
         

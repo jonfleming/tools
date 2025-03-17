@@ -76,7 +76,7 @@ function generateCypherStatementForFacts(entities) {
   const flattened = Object.values(entities).flat();
   const where = flattened.map(name => `apoc.text.phonetic(subject.name) = apoc.text.phonetic('${name}')`).join(" or ");
   const cypherStatement = `
-    MATCH (subject)-[r]-(object)
+    MATCH (subject)-[r]->(object)
     WHERE ${where}
     RETURN subject.name, type(r), object.name
   `;

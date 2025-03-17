@@ -1,139 +1,50 @@
-import React, { useState, useEffect, useRef } from "react"; // Add useRef import
+import React, { useEffect } from "react";
 import PropTypes from 'prop-types';
-
-export default function AuthDialog({ onClose }) {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [isAwaitingVerification, setIsAwaitingVerification] = useState(false);
-  const emailInputRef = useRef(null); // Add ref for email input
+import { Auth } from "@supabase/auth-ui-react";
+import { ThemeSupa } from "@supabase/auth-ui-shared";
+import { createClient } from "@supabase/supabase-js";
+import { getSupabaseClient } from "../lib/supabaseClient";
+export default function AuthDialog({ onClose, supabaseUrl, supabaseAnonKey }) {
+  const supabase = getSupabaseClient(supabaseUrl, supabaseAnonKey);
 
   useEffect(() => {
-    // Focus the email input when component mounts
-    emailInputRef.current?.focus();
+    // Set up the auth state change listener outside the render function
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log("Auth state changed:", event, session);
 
-    const queryParams = new URLSearchParams(window.location.search);
-    const verified = queryParams.get('verified');
-    
-    if (verified === 'true') {
-      setError("Email verified successfully! You can now sign in.");
-      // Clean up the URL
-      window.history.replaceState({}, '', '/');
-    }
-  }, []);
-
-  const handleResendConfirmation = async () => {
-    try {
-      setError(""); // Clear any previous errors
-      const response = await fetch("/resend-confirmation", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email }),
-      });
-      const data = await response.json();
-      if (response.ok) {
-        setError("Confirmation email has been resent. Please check your inbox.");
-      } else {
-        setError(data.error || "Failed to resend confirmation email");
+      if (event === "SIGNED_IN" && session) {
+        console.log("User signed in:", session.user);
+        
+        const fullName = session.user.user_metadata?.full_name || 
+        session.user.user_metadata?.name ||
+        session.user.user_metadata?.preferred_username ||
+        'Unknown';
+        onClose(session.user.email, fullName);
       }
-    } catch (err) {
-      setError("An unexpected error occurred");
-    }
-  };
+    });
 
-  const handleSignUp = async () => {
-    try {
-      setError(""); // Clear any previous errors
-      const response = await fetch("/signup", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email, password }),
-      });
-      const data = await response.json();
-      if (response.ok) {
-        console.log("User signed up:", data.user);
-        setError("Please check your email to verify your account.");
-        setIsAwaitingVerification(true);
-      } else {
-        setError(data.error || "Failed to sign up");
-      }
-    } catch (err) {
-      setError("An unexpected error occurred");
-    }
-  };
+    // Cleanup subscription on unmount
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [supabase, onClose]);
 
-  const handleSignIn = async () => {
-    try {
-      setError(""); // Clear any previous errors
-      const response = await fetch("/signin", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email, password }),
-      });
-      const {user} = await response.json();
-      if (response.ok) {
-        console.log("User signed in:", user);
-        onClose(user.email);
-      } else {
-        setError(data.error || "Failed to sign in");
-      }
-    } catch (err) {
-      setError("An unexpected error occurred");
-    }
-  };
+  // Determine the redirect URL safely
+  const redirectUrl = typeof window !== 'undefined'
+    ? window.location.origin
+    : 'http://localhost:3000';
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
       <div className="bg-white p-6 rounded-lg shadow-lg w-96">
         <h2 className="text-xl mb-4">Authentication</h2>
-        {error && (
-          <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
-            {error}
-          </div>
-        )}
-        <input
-          ref={emailInputRef} // Add ref to email input
-          type="email"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="border p-2 mb-2 w-full rounded"
+        <Auth
+          supabaseClient={supabase}
+          appearance={{ theme: ThemeSupa }}
+          providers={["github", "google"]}
+          theme="dark"
+          redirectTo={redirectUrl} // Explicitly set redirect URL
         />
-        <input
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="border p-2 mb-2 w-full rounded"
-        />
-        <div className="flex gap-2">
-          <button
-            onClick={handleSignUp}
-            className="bg-blue-500 text-white p-2 rounded flex-1 hover:bg-blue-600"
-          >
-            Sign Up
-          </button>
-          <button
-            onClick={handleSignIn}
-            className="bg-blue-500 text-white p-2 rounded flex-1 hover:bg-blue-600"
-          >
-            Sign In
-          </button>
-        </div>
-        {isAwaitingVerification && (
-          <button
-            onClick={handleResendConfirmation}
-            className="mt-4 w-full p-2 text-blue-600 hover:text-blue-800 text-sm"
-          >
-            Resend confirmation email
-          </button>
-        )}
       </div>
     </div>
   );
@@ -141,4 +52,6 @@ export default function AuthDialog({ onClose }) {
 
 AuthDialog.propTypes = {
   onClose: PropTypes.func.isRequired,
+  supabaseUrl: PropTypes.string.isRequired,
+  supabaseAnonKey: PropTypes.string.isRequired,
 };

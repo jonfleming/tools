@@ -100,6 +100,7 @@ export default function ToolPanel({
   isSessionActive,
   sendClientEvent,
   events,
+  fullName,
 }) {
   const [functionAdded, setFunctionAdded] = useState(false);
   const [functionCallOutput, setFunctionCallOutput] = useState(null);
@@ -167,6 +168,7 @@ export default function ToolPanel({
                   Use the following facts to answer the user's query.
                   Don't repeat the facts, just use them to answer the query.
                   If the user asks for more facts, use the query tool to get more facts.
+                  The user's name is ${fullName}.
                   Facts: ${data.facts.join(", ")}
                 `,
                 },
