@@ -157,7 +157,7 @@ export default function App() {
       body: JSON.stringify({ text }) 
     });
     
-    const data = await response.text();
+    const data = await response.json();
     return data.content;
   }
 

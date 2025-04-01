@@ -145,6 +145,19 @@ async function saveConversationItem(item) {
   return { classification: sentenceClassification[item.classification_id], data, error };
 }
 
+function removeQuotes(str) {
+  if (typeof str !== 'string') {
+    return str; // Return as is if not a string
+  }
+  // Remove surrounding single or double quotes
+  if (str.startsWith('"') && str.endsWith('"')) {
+    return str.slice(1, -1);
+  }
+  if (str.startsWith("'") && str.endsWith("'")) {
+    return str.slice(1, -1);
+  }  
+}
+
 // Modify the save-conversation-item handler to include embeddings
 app.post("/save-conversation-item", async (req, res) => {
   let response;
@@ -249,7 +262,9 @@ app.post("/topic", async (req, res) => {
     return res.status(400).json({ error });
   }
   
-  return res.json({ content });    
+  const response = { content: removeQuotes(content) };
+  
+  return res.json(response);    
 });
 
 app.post("/get-facts", async (req, res) => {
