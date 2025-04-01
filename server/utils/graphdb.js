@@ -50,7 +50,7 @@ function generateCypherMergeStatement(entities, triple, item, nodes) {
   }
 
   // 3. Add properties to the subject node
-  cypherLines.push(`ON CREATE SET ${subjectVar} = {create = timestamp(), user: '${item.user}', session: '${item.session}', topic: '${item.topic}'}`);
+  cypherLines.push(`ON CREATE SET ${subjectVar} = {create: timestamp(), user: '${item.user}', session: '${item.session}', topic: '${item.topic}'}`);
   
   // 4. Construct the Cypher MERGE statement
   const cypherStatement = cypherLines.join("\n");
@@ -113,9 +113,18 @@ export async function updateGraphDB(entities, relationships, item) {
   }
   // Execute the Cypher statements
   try {
-    console.log("Executing Cypher statement:", query);
-    const result = await driver.executeQuery(query);
-    console.log("Result:",result);
+    console.log("Executing Cypher statements:", query);
+    query.split(';').forEach((q, index) => {
+      if (!q.trim()) return; // Skip empty queries
+      console.log(`Executing query ${index + 1}:`, q);
+      driver.executeQuery(q + ";")
+        .then(result => {
+          console.log(`Query ${index + 1} executed successfully:`, result);
+        })
+        .catch(error => {
+          console.error(`Error executing query ${index + 1}:`, error);
+        });
+    });
   } catch (error) {
     console.error("Error executing Cypher statement:", error);
     return ({ code: 500, message: "Error updating graph database" });
