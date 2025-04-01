@@ -172,7 +172,7 @@ app.post("/save-conversation-item", async (req, res) => {
           const relationships = await getRelationships(item.content, entities);
           console.log("Extracted relationships:", relationships);
     
-          response = await updateGraphDB(entities, relationships);
+          response = await updateGraphDB(entities, relationships, item);
           return res.status(response.code).json(response);
         }
       } else {

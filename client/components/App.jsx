@@ -157,7 +157,7 @@ export default function App() {
       body: JSON.stringify({ text }) 
     });
     
-    const data = await response.json();
+    const data = await response.text();
     return data.content;
   }
 
@@ -220,11 +220,14 @@ export default function App() {
       setInputItemID(item.item_id);
 
       // Start loading animation and sound
-      setIsProcessing(true);
-      if (loadingAudioRef.current) {
-        loadingAudioRef.current.play();
-      }
+      console.log("Starting loading animation");
+      startTicking();
 
+      // Set a timeout to stop the loading animation after 5 seconds
+      setTimeout(() => {
+        console.log("Stopping loading animation");
+        stopTicking();
+      }, 5000);
 
       // Save to conversation item and get back any additional context
       const response = await fetch("/save-conversation-item", {
@@ -261,6 +264,21 @@ export default function App() {
     setSession(crypto.randomUUID());
   }
 
+  function startTicking() {
+    setIsProcessing(true);
+    if (loadingAudioRef.current) {
+      loadingAudioRef.current.play();
+    }
+  }
+
+  function stopTicking() {
+    setIsProcessing(false);
+    if (loadingAudioRef.current) {
+      loadingAudioRef.current.pause();
+      loadingAudioRef.current.currentTime = 0;
+    }
+  }
+
   // Attach event listeners to the data channel when a new one is created
   useEffect(() => {
     if (dataChannel) {
@@ -273,11 +291,8 @@ export default function App() {
         switch (data.type) {
           case "response.create":
             // Stop loading animation and sound
-            setIsProcessing(false);
-            if (loadingAudioRef.current) {
-              loadingAudioRef.current.pause();
-              loadingAudioRef.current.currentTime = 0;
-            }
+            console.log("Stopping loading animation: response.create");
+            stopTicking();
             break;
           case "conversation.item.input_audio_transcription.completed":
             console.log("User transcript: ",e, data.transcript)
@@ -299,11 +314,8 @@ export default function App() {
             break;
           case "response.created":
             // Response started, keep animation going
-            setIsProcessing(false);
-            if (loadingAudioRef.current) {
-              loadingAudioRef.current.pause();
-              loadingAudioRef.current.currentTime = 0;
-            }
+            console.log("Stopping loading animation: response.created");
+            stopTicking();
             break;
           default:
             break;

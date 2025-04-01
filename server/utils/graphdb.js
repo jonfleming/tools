@@ -22,7 +22,7 @@ function transformVerbToRelationshipType(verb) {
   return relationshipType;
 }
 
-function generateCypherMergeStatement(entities, triple, nodes) {
+function generateCypherMergeStatement(entities, triple, item, nodes) {
   const { subject, verb, object } = triple;
   const cypherLines = [];
 
@@ -49,19 +49,38 @@ function generateCypherMergeStatement(entities, triple, nodes) {
     cypherLines.push(`MERGE (${subjectVar})-[:${relationshipType}]->(${objectVar})`);
   }
 
-  // 3. Construct the Cypher MERGE statement
+  // 3. Add properties to the subject node
+  cypherLines.push(`ON CREATE SET ${subjectVar} = {create = timestamp(), user: '${item.user}', session: '${item.session}', topic: '${item.topic}'}`);
+  
+  // 4. Construct the Cypher MERGE statement
   const cypherStatement = cypherLines.join("\n");
 
-  return cypherStatement;
+  return cypherStatement + ';';
+  /*  "MERGE (Jon:Person {name: 'Jon'})"
+      "MERGE (Jon_Fleming:Person {name: 'Jon Fleming'})"
+      'MERGE (Jon)-[:IS]->(Jon_Fleming);'
+
+      "MERGE (software_architect:Occupation {name: 'software architect'})"
+      'MERGE (Jon)-[:HAS_OCCUPATION]->(software_architect);'
+
+      "MERGE (Fleming_AI:Organization {name: 'Fleming AI'})"
+      'MERGE (Jon)-[:WORKS_AT]->(Fleming_AI);'
+
+      "MERGE (Bothell:Place {name: 'Bothell'})"
+      'MERGE (Fleming_AI)-[:LOCATED_IN]->(Bothell);'
+
+      "MERGE (Tesla:Product {name: 'Tesla'})"
+      'MERGE (Jon)-[:DRIVES]->(Tesla);'
+  */
 }
 
 function getEntityLabel(entities, entityName) {
   return Object.keys(entities).find(label => entities[label].includes(entityName)) || null;
 }
 
-function generateCypherStatementsForTriples(entities, triples) {
+function generateCypherStatementsForTriples(entities, triples, item) {
   const nodes = new Set(); // To keep track of merged nodes
-  const cypher = triples.map((triple) => generateCypherMergeStatement(entities, triple, nodes)).join("\n");
+  const cypher = triples.map((triple) => generateCypherMergeStatement(entities, triple, item, nodes)).join("\n");
   
   return cypher;
 }
@@ -84,13 +103,13 @@ function generateCypherStatementForFacts(entities) {
   return cypherStatement;
 }
 
-export async function updateGraphDB(entities, relationships) {
-  const query = generateCypherStatementsForTriples(entities, relationships);
+export async function updateGraphDB(entities, relationships, item) {
+  const query = generateCypherStatementsForTriples(entities, relationships, item);
   console.log("Generated Cypher statements:", query);
   
   if (!query) {
     console.log("No Cypher statements generated.");
-    return;
+    return ({ code: 200, message: `No Cypher statements generated for ${item.content}` });
   }
   // Execute the Cypher statements
   try {
