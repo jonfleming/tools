@@ -1,3 +1,4 @@
+import React from 'react';
 import { User, Cpu } from "react-feather";
 import { useState } from "react";
 
