@@ -1,3 +1,4 @@
+import React from 'react';
 import { useState } from "react";
 import { CloudLightning, CloudOff, MessageSquare } from "react-feather";
 import Button from "./Button";
