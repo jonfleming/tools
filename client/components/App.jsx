@@ -29,7 +29,7 @@ export default function App() {
   const [user, setUser] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const loadingAudioRef = useRef(null);
-  const supabaseUrl  = import.meta.env.VITE_SUPABASE_URL;
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
   const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
   const supabase = getSupabaseClient(supabaseUrl, supabaseAnonKey);
   

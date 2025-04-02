@@ -4,14 +4,14 @@ export default async () => {
     verbose: true,
     testEnvironment: 'jsdom',
     transform: {
-      '^.+\\.jsx?$': 'babel-jest',
+      '^.+\\.jsx?$': 'esbuild-jest',
     },
     setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
     moduleNameMapper: {
       '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
       '\\.(jpg|jpeg|png|gif|ico)$': '<rootDir>/mocks/fileMock.js',
     },
+    transformIgnorePatterns: ['/node_modules/(?!uuid)/'],
     resolver: undefined,
-    // extensionsToTreatAsEsm: ['.js'], // Remove this line
   };
 };

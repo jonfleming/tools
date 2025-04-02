@@ -28,11 +28,17 @@
     "react-router-dom": "^6.20.0"
   },
   "devDependencies": {
+    "@babel/core": "^7.26.10",
+    "@babel/plugin-transform-modules-commonjs": "^7.26.3",
     "@babel/preset-env": "^7.26.9",
     "@babel/preset-react": "^7.26.3",
+    "@jest/globals": "^29.7.0",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.2.0",
     "@vitejs/plugin-react": "^4.3.4",
+    "babel-jest": "^29.7.0",
+    "esbuild-jest": "^0.5.0",
+    "identity-obj-proxy": "^3.0.0",
     "jest": "^29.7.0",
     "jest-environment-jsdom": "^29.7.0",
     "node-fetch": "^3.3.2",
