@@ -35,22 +35,32 @@ function generateCypherMergeStatement(entities, triple, item, nodes) {
   const subjectEntityLabel = getEntityLabel(entities, subject);
   const objectEntityLabel = getEntityLabel(entities, object);
 
+  cypherLines.push(``);
+  cypherLines.push(`// ${objectEntityLabel}`);
+  
   if (subjectEntityLabel && objectEntityLabel) {
     const entity1 = `${subjectVar}:${subjectEntityLabel} {name: '${subject}'}`;
     const entity2 = `${objectVar}:${objectEntityLabel} {name: '${object}'}`;
+    cypherLines.push(`MERGE (${entity1})`);
     if (!nodes.has(subjectVar)) {
-      cypherLines.push(`MERGE (${entity1})`);
       nodes.add(subjectVar);
     }
+    cypherLines.push(`MERGE (${entity2})`);
     if (!nodes.has(objectVar)) {
-      cypherLines.push(`MERGE (${entity2})`);
       nodes.add(objectVar);
     }
-    cypherLines.push(`MERGE (${subjectVar})-[:${relationshipType}]->(${objectVar})`);
+
+    if (subjectVar !== objectVar) {
+      cypherLines.push(`MERGE (${subjectVar})-[:${relationshipType}]->(${objectVar})`);
+    }
   }
 
   // 3. Add properties to the subject node
-  cypherLines.push(`ON CREATE SET ${subjectVar} = {create: timestamp(), user: '${item.user}', session: '${item.session}', topic: '${item.topic}'}`);
+  cypherLines.push(`ON CREATE SET `);
+  cypherLines.push(`${subjectVar}.created = timestamp(),`)
+  cypherLines.push(`${subjectVar}.user =  '${item.user}',`)
+  cypherLines.push(`${subjectVar}.session =  '${item.session}',`)
+  cypherLines.push(`${subjectVar}.topic =  '${item.topic}'`)
   
   // 4. Construct the Cypher MERGE statement
   const cypherStatement = cypherLines.join("\n");

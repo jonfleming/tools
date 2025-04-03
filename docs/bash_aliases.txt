@@ -1,0 +1,8 @@
+alias clr='suparm && neorm'
+alias neoget='cypher "MATCH (n) RETURN n;"'
+alias neorm='cypher "MATCH (n) DETACH DELETE n;"'
+alias supa='PGPASSWORD=$SUPABASE_PASSWORD psql -h $SUPABASE_HOST -p $SUPABASE_PORT -U $SUPABASE_USER -d postgres -P format=wrapped'
+alias supaget='supa -c "SELECT user, topic, content FROM conversation_items;"'
+alias suparm='supa -c "TRUNCATE TABLE conversation_items RESTART IDENTITY;"'
+alias tools='pushd /home/jon/projects/tools && code .'
+alias seed='cypher -f docs/seed.cql && supa -f docs/seed.cql'

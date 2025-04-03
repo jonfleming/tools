@@ -33,22 +33,25 @@ const vite = await createViteServer({
 });
 app.use(vite.middlewares);
 
-// // Middleware to verify Supabase JWT tokens
-// app.use(async (req, res, next) => {
-//   const token = req.headers.authorization?.split(" ")[1];
-//   if (!token) {
-//     return res.status(401).json({ error: "Unauthorized" });
-//   }
+// Middleware to verify Supabase JWT tokens
+const verifyToken = async (req, res, next) => {
+  const token = req.headers.authorization?.split(" ")[1];
+  if (!token) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
 
-//   try {
-//     const { sub: userId } = jwt.decode(token); // Decode the token to get the user ID
-//     req.user = { id: userId }; // Attach user info to the request object
-//     next();
-//   } catch (error) {
-//     console.error("JWT verification error:", error);
-//     res.status(401).json({ error: "Invalid token" });
-//   }
-// });
+  try {
+    const { sub: userId } = jwt.decode(token); // Decode the token to get the user ID
+    req.user = { id: userId }; // Attach user info to the request object
+    next();
+  } catch (error) {
+    console.error("JWT verification error:", error);
+    res.status(401).json({ error: "Invalid token" });
+  }
+};
+
+// Apply the middleware only to protected routes
+app.use("/protected-data", verifyToken);
 
 // API route for token generation
 app.get("/token", async (req, res) => {
@@ -158,7 +161,35 @@ function removeQuotes(str) {
   }  
 }
 
-// Modify the save-conversation-item handler to include embeddings
+function resolveEntities(entities) {
+  const resolved = {};
+
+  for (const [category, names] of Object.entries(entities)) {
+    const seen = new Set();
+    resolved[category] = new Set();
+
+    for (const name of names) {
+      const normalized = name.toLowerCase().trim();
+      const merged = Array.from(seen).find(s => normalized.includes(s.toLowerCase()) || s.toLowerCase().includes(normalized));
+
+      if (merged) {
+        resolved[category].add(merged); // Use the original name for display purposes
+      } else {
+        resolved[category].add(name); // Store the original name
+        seen.add(name); // Track the original name
+      }
+    }
+  }
+
+  // Convert sets back to arrays
+  for (const category in resolved) {
+    resolved[category] = Array.from(resolved[category]);
+  }
+
+  return resolved;
+}
+
+// Modify the save-conversation-item handler to include entity resolution
 app.post("/save-conversation-item", async (req, res) => {
   let response;
   const { item } = req.body;
@@ -179,13 +210,14 @@ app.post("/save-conversation-item", async (req, res) => {
       if (classification === "Statement") {
         // entities is an object with keys that are entity types and values that are arrays of entity names
         const entities = await getEntities(item.content, item.user);
-        console.log("Extracted entities:", entities);
+        const resolvedEntities = resolveEntities(entities);
+        console.log("Resolved entities:", resolvedEntities);
   
-        if (Object.keys(entities).length > 0) {
-          const relationships = await getRelationships(item.content, entities);
+        if (Object.keys(resolvedEntities).length > 0) {
+          const relationships = await getRelationships(item.content, resolvedEntities);
           console.log("Extracted relationships:", relationships);
     
-          response = await updateGraphDB(entities, relationships, item);
+          response = await updateGraphDB(resolvedEntities, relationships, item);
           return res.status(response.code).json(response);
         }
       } else {
