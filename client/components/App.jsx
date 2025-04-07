@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import logo from "/assets/relevantic.ico";
+import { ExitButton, ChatButton, LogButton} from "./Buttons";
 import EventLog from "./EventLog";
 import Conversation from "./Conversation";
 import SessionControls from "./SessionControls";
@@ -32,12 +33,12 @@ export default function App() {
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
   const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
   const supabase = getSupabaseClient(supabaseUrl, supabaseAnonKey);
-  
+
   async function startSession() {
     console.log("Starting App session...");
     const instructions = `You are a helpful assistant named Amy.  The user's name is ${user}. 
     Use the supplied information to answer the user's questions.`;
-    
+
     // Get an ephemeral key from the Fastify server
     const tokenResponse = await fetch(`/token?instructions=${instructions}`);
     const data = await tokenResponse.json();
@@ -144,7 +145,7 @@ export default function App() {
       role: "user",
       content: message,
     });
-        
+
     sendClientEvent({ type: "response.create" });
   }
 
@@ -154,9 +155,9 @@ export default function App() {
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ text }) 
+      body: JSON.stringify({ text })
     });
-    
+
     const data = await response.json();
     return data.content;
   }
@@ -173,11 +174,11 @@ export default function App() {
         }
         item.type = "context";
         if (item.topic == "facts") {
-          item.content = '   Fact: ' + item.content;  
+          item.content = '   Fact: ' + item.content;
         } else {
           item.content = '   Recalling: ' + item.content;
         }
-        
+
         console.log("Adding context item to conversation:", item);
         // Add context item to conversation
         setConversationItems((prev) => [...prev, item]);
@@ -200,7 +201,7 @@ export default function App() {
       } else {
         item.session = session;
       }
-  
+
       if (!topic) {
         item.topic = await getSummary(item.content);
       } else {
@@ -255,7 +256,7 @@ export default function App() {
       console.log("Setting responseReady to true");
       setResponseReady(true);
     }
-  }    
+  }
 
   function handleAuthLogin(user, fullname) {
     setShowAuth(false);
@@ -295,7 +296,7 @@ export default function App() {
             stopTicking();
             break;
           case "conversation.item.input_audio_transcription.completed":
-            console.log("User transcript: ",e, data.transcript)
+            console.log("User transcript: ", e, data.transcript)
             addToConversation({
               item_id: crypto.randomUUID(),
               type: "input_text",
@@ -304,7 +305,7 @@ export default function App() {
             });
             break;
           case "response.audio_transcript.done":
-            console.log("Assistant transcript: ", e, data.transcript)            
+            console.log("Assistant transcript: ", e, data.transcript)
             addToConversation({
               item_id: crypto.randomUUID(),
               type: "input_text",
@@ -329,7 +330,7 @@ export default function App() {
       });
     }
   }, [dataChannel]);
-  
+
   useEffect(() => {
     console.log("Change detected in responseReady or inputItemID:", responseReady, inputItemID);
     if (responseReady && inputItemID) {
@@ -343,7 +344,7 @@ export default function App() {
         type: itemType,
         role: role,
         session: session,
-        topic: topic, 
+        topic: topic,
         user: user,
       };
 
@@ -352,7 +353,7 @@ export default function App() {
 
       setInputItemID("");
       setResponseReady(false);
-      
+
       // Save to Supabase
       fetch("/save-conversation-item", {
         method: "POST",
@@ -360,20 +361,20 @@ export default function App() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ item }),
-      });      
+      });
     }
-  }, [responseReady]);  
+  }, [responseReady]);
 
 
   useEffect(() => {
     console.log("messages", conversationItems);
-  }, [conversationItems]);  
+  }, [conversationItems]);
 
   // Initialize the loading audio on component mount
   useEffect(() => {
     loadingAudioRef.current = new Audio('/public/assets/processing.mp3');
     loadingAudioRef.current.loop = true;
-    
+
     return () => {
       if (loadingAudioRef.current) {
         loadingAudioRef.current.pause();
@@ -390,27 +391,35 @@ export default function App() {
           <h1>Relevantic Recall</h1>
         </div>
         {isAuthenticated && (
-          <button
-            onClick={async () => {
-              await supabase.auth.signOut();
-              setIsAuthenticated(false);
-              setShowAuth(true);
-            }}
-            className="mr-4 px-4 py-2 bg-red-500 text-white rounded"
-          >
-            Sign Out
-          </button>
+          <div className="flex gap-4">
+            <ChatButton className="mb-2 p-2 bg-gray-100 text-black rounded-md" onClick={() => setShowConversation(!showConversation)}>
+              {showConversation ? "Hide" : "Show"} Conversation
+            </ChatButton>
+            <LogButton className="mb-2 p-2 bg-gray-100 text-black rounded-md" onClick={() => setShowEventLog(!showEventLog)}>
+              {showEventLog ? "Hide" : "Show"} Event Log
+            </LogButton>
+
+            <ExitButton className="mb-2 p-2 bg-gray-100 text-black rounded-md" 
+              onClick={async () => {
+                await supabase.auth.signOut();
+                setIsAuthenticated(false);
+                setShowAuth(true);
+              }}
+            >
+              Sign Out
+            </ExitButton>
+            </div>
         )}
       </nav>
       <main className="absolute top-16 left-0 right-0 bottom-0 flex flex-col justify-between" style={{ paddingRight: "380px" }}>
         {showAuth && !isAuthenticated && (
           <AuthDialog
             onClose={handleAuthLogin}
-            supabaseUrl={supabaseUrl }
-            supabaseAnonKey={supabaseAnonKey}  
+            supabaseUrl={supabaseUrl}
+            supabaseAnonKey={supabaseAnonKey}
           />
         )}
-        
+
         {isAuthenticated ? (
           <>
             <section
@@ -426,12 +435,6 @@ export default function App() {
               <EventLog events={events} />
             </section>
             <div className="px-4 flex justify-between">
-              <button className="mb-2 p-2 bg-blue-500 text-white rounded-md" onClick={() => setShowConversation(!showConversation)}>
-                {showConversation ? "Hide" : "Show"} Conversation
-              </button>
-              <button className="mb-2 p-2 bg-blue-500 text-white rounded-md" onClick={() => setShowEventLog(!showEventLog)}>
-                {showEventLog ? "Hide" : "Show"} Event Log
-              </button>
               <SessionControls
                 startSession={startSession}
                 stopSession={stopSession}
