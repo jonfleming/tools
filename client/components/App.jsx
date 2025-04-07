@@ -434,7 +434,7 @@ export default function App() {
             >
               <EventLog events={events} />
             </section>
-            <div className="px-4 flex justify-between">
+            <div className="flex">
               <SessionControls
                 startSession={startSession}
                 stopSession={stopSession}

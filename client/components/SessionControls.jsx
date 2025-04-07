@@ -14,13 +14,13 @@ function SessionStopped({ startSession }) {
   }
 
   return (
-    <div className="flex items-center justify-center w-full h-full">
+    <div className="flex items-center justify-right w-full h-full">
       <Button
         onClick={handleStartSession}
         className={isActivating ? "bg-gray-600" : "bg-red-600"}
         icon={<CloudLightning height={16} />}
       >
-        {isActivating ? "starting session..." : "start session"}
+        {isActivating ? "starting session..." : "Start Session"}
       </Button>
     </div>
   );
@@ -44,7 +44,7 @@ function SessionActive({ stopSession, sendTextMessage }) {
         }}
         type="text"
         placeholder="send a text message..."
-        className="border border-gray-200 rounded-full p-4 flex-1"
+        className="border border-gray-200 rounded-full p-4 w-3/4 mx-auto"
         value={message}
         onChange={(e) => setMessage(e.target.value)}
       />
@@ -75,7 +75,7 @@ export default function SessionControls({
   isSessionActive,
 }) {
   return (
-    <div className="flex gap-4 border-t-2 border-gray-200 h-full rounded-md">
+    <div className="flex gap-4 border-t-2 border-gray-200 h-full w-full rounded-md">
       {isSessionActive ? (
         <SessionActive
           stopSession={stopSession}
