@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { SpeakButton, SilenceButton } from "./Buttons";
 
 const sessionUpdate = {
   type: "session.update",
@@ -105,13 +106,40 @@ export default function ToolPanel({
   const [functionAdded, setFunctionAdded] = useState(false);
   const [functionCallOutput, setFunctionCallOutput] = useState(null);
   const [facts, setFacts] = useState([]);
+  const [isSoundOn, setIsSoundOn] = useState(true);
+
+  function updateSession(sound = isSoundOn) {
+    const sessionModalities = structuredClone(sessionUpdate);
+    sessionModalities.session.modalities = sound ? ["text", "audio"] : ["text"];
+    sessionModalities.event_id = crypto.randomUUID();
+    sendClientEvent(sessionModalities);
+  }
+
+  function handleToggleSound() {
+    updateSession(!isSoundOn);
+    setIsSoundOn(!isSoundOn);
+  }
+
+  function SoundButton() {
+    return isSoundOn ? (
+      <SpeakButton
+        onClick={handleToggleSound}
+        className=""
+      />
+    ) : (
+      <SilenceButton
+        onClick={handleToggleSound}
+        className=""
+      />
+    );
+  }
 
   useEffect(() => {
     if (!events || events.length === 0) return;
 
     const firstEvent = events[events.length - 1];
     if (!functionAdded && firstEvent.type === "session.created") {
-      sendClientEvent(sessionUpdate);
+      updateSession(isSoundOn);
       setFunctionAdded(true);
     }
 
@@ -197,6 +225,9 @@ export default function ToolPanel({
   return (
     <section className="h-full w-full flex flex-col gap-4">
       <div className="h-full bg-gray-50 rounded-md p-4">
+        { isSessionActive && (
+          <SoundButton/>
+        )}
         <h2 className="text-lg font-bold">Color Palette Tool</h2>
         {isSessionActive ? (
           functionCallOutput ? (

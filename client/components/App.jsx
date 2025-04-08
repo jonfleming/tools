@@ -186,6 +186,11 @@ export default function App() {
     }
   }
 
+  function addAssistantTextToConversation(item) {
+    console.log("Adding assistant item to conversation:", item);
+    setConversationItems((prev) => [...prev, item]);
+  }
+
   async function addToConversation(item) {
     if (!item.content.trim()) {
       console.log("Empty content, not adding to conversation");
@@ -318,6 +323,17 @@ export default function App() {
             console.log("Stopping loading animation: response.created");
             stopTicking();
             break;
+          case "response.text.done":
+            // Stop loading animation and sound
+            console.log("Stopping loading animation: response.text.done");
+            stopTicking();
+            addAssistantTextToConversation({
+              item_id: crypto.randomUUID(),
+              type: "input_text",
+              role: "assistant",
+              content: data.text,
+            })            
+            break;
           default:
             break;
         };
@@ -372,7 +388,7 @@ export default function App() {
 
   // Initialize the loading audio on component mount
   useEffect(() => {
-    loadingAudioRef.current = new Audio('/public/assets/processing.mp3');
+    loadingAudioRef.current = new Audio('/assets/processing.mp3');
     loadingAudioRef.current.loop = true;
 
     return () => {

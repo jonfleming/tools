@@ -36,7 +36,7 @@ function Event({ event, timestamp }) {
 export default function EventLog({ events }) {
   const eventsToDisplay = [];
   let deltaEvents = {};
-
+  //console.log("Events:", events);
   events.forEach((event) => {
     if (event.type.endsWith("delta")) {
       if (deltaEvents[event.type]) {

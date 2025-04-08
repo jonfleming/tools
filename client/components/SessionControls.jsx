@@ -14,7 +14,7 @@ function SessionStopped({ startSession }) {
   }
 
   return (
-    <div className="flex items-center justify-right w-full h-full">
+    <div className="flex items-center justify-end w-full h-full">
       <Button
         onClick={handleStartSession}
         className={isActivating ? "bg-gray-600" : "bg-red-600"}
@@ -26,7 +26,7 @@ function SessionStopped({ startSession }) {
   );
 }
 
-function SessionActive({ stopSession, sendTextMessage }) {
+function SessionActive({ stopSession, sendTextMessage, toggleSound, isSoundOn }) {
   const [message, setMessage] = useState("");
 
   function handleSendClientEvent() {
@@ -44,7 +44,7 @@ function SessionActive({ stopSession, sendTextMessage }) {
         }}
         type="text"
         placeholder="send a text message..."
-        className="border border-gray-200 rounded-full p-4 w-3/4 mx-auto"
+        className="border border-gray-200 rounded-full p-4 w-2/3 mx-auto"
         value={message}
         onChange={(e) => setMessage(e.target.value)}
       />
