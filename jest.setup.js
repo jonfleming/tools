@@ -17,3 +17,12 @@ global.import = {
 // Set environment variables directly on process.env
 process.env.VITE_SUPABASE_URL = 'https://mock-supabase-url.com';
 process.env.VITE_SUPABASE_ANON_KEY = 'example-anon-key';
+
+// Mock document if not already available
+if (typeof document === 'undefined') {
+  global.document = {
+    body: {},
+    createElement: () => ({}),
+    querySelector: () => null,
+  };
+}

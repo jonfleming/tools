@@ -1,10 +1,12 @@
+
 /** @returns {Promise<import('jest').Config>} */
 export default async () => {
+
   return {
     verbose: true,
     testEnvironment: 'jsdom',
     transform: {
-      '^.+\\.jsx?$': 'esbuild-jest',
+      '^.+\\.[jt]sx?$': 'babel-jest',
     },
     setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
     moduleNameMapper: {

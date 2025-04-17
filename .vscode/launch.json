@@ -1,10 +1,9 @@
 {
     "version": "0.2.0",
     "configurations": [
-        
         {
-            "command": "npm run dev",
-            "name": "npm run dev",
+            "command": "bun run dev",
+            "name": "bun run dev",
             "request": "launch",
             "type": "node-terminal"
         },
@@ -19,13 +18,10 @@
         },        
         {
             "type": "node",
-            "name": "Debug Jest Tests",
+            "name": "Debug Bun Tests",
             "request": "launch",
-            "program": "${workspaceFolder}/node_modules/jest/bin/jest",
-            "args": [
-                "--runInBand",
-                "--watchAll=false"
-            ],
+            "runtimeExecutable": "bun",
+            "program": "test",
             "cwd": "${workspaceFolder}",
             "console": "integratedTerminal",
             "internalConsoleOptions": "neverOpen"
