@@ -1,12 +1,12 @@
 {
   "type": "module",
   "scripts": {
-    "dev": "node server/server.js --dev --host localhost --port 3000",
-    "start": "node server/server.js",
-    "build": "npm run build:client && npm run build:server",
+    "dev": "bun server/server.js --dev --host localhost --port 3000",
+    "start": "bun server/server.js",
+    "build": "bun run build:client && bun run build:server",
     "build:client": "vite build --outDir dist/client --ssrManifest",
     "build:server": "vite build --outDir dist/server --ssr /index.js",
-    "devinstall": "zx ../../devinstall.mjs -- node server/server.js --dev",
+    "devinstall": "zx ../../devinstall.mjs -- bun server/server.js --dev",
     "lint": "eslint . --ext .js,.jsx --fix",
     "test": "jest --config jest.config.js"
   },
